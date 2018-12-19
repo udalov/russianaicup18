@@ -1,4 +1,5 @@
 #include <iostream>
+#include <thread>
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -43,6 +44,21 @@ void RemoteProcessClient::writeline(string line) {
 RemoteProcessClient::RemoteProcessClient(string host, int port) {
     socket.Initialize();
     socket.DisableNagleAlgoritm();
+
+    this_thread::sleep_for(chrono::milliseconds(2000));
+
+    /*
+    auto tryNo = 0;
+    while (!socket.Open(reinterpret_cast<const uint8*>(host.c_str()), static_cast<int16>(port))) {
+        if (++tryNo < 20) {
+            cerr << "Connecting to " << host << ":" << port << " (" << tryNo << ")..." << endl;
+            this_thread::sleep_for(chrono::milliseconds(500));
+        } else {
+            cerr << "Failed to connect to " << host << ":" << port << endl;
+            exit(10001);
+        }
+    }
+    */
 
     if (!socket.Open(reinterpret_cast<const uint8*>(host.c_str()), static_cast<int16>(port))) {
         cerr << "Failed to connect to " << host << ":" << port << endl;
