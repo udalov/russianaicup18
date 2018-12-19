@@ -44,4 +44,4 @@ internal val INITIAL_ZOOM = 0.75
 
 internal val INITIAL_AUTO_PLAY_TIMEOUT = 20.0
 
-internal val INITIAL_SHIFT = Point(30, INITIAL_WORLD_HEIGHT - 820)
+internal val INITIAL_SHIFT = Point(0, 0)

@@ -34,6 +34,6 @@ run {
     if (project.hasProperty("testVis")) {
         args = ["test-log.txt"]
     } else {
-        args = ["/Users/udalov/c/russianaicup16/out/log.txt"]
+        args = ["/Users/udalov/c/russianaicup18/src/out/log.txt"]
     }
 }

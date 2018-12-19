@@ -16,10 +16,12 @@ add_library(russianaicup
     csimplesocket/ActiveSocket.cpp
     csimplesocket/PassiveSocket.cpp
     csimplesocket/SimpleSocket.cpp
-    MyStrategy.cpp
     RemoteProcessClient.cpp
     Runner.cpp
     Strategy.cpp
+
+    MyStrategy.cpp
+    Vis.cpp
 )
 
 add_executable(Runner DefaultRunner.cpp)

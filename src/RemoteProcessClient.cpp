@@ -44,7 +44,7 @@ RemoteProcessClient::RemoteProcessClient(string host, int port) {
     socket.Initialize();
     socket.DisableNagleAlgoritm();
 
-    this_thread::sleep_for(chrono::milliseconds(2000));
+    this_thread::sleep_for(chrono::milliseconds(500));
 
     /*
     auto tryNo = 0;
