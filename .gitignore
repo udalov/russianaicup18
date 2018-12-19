@@ -1,2 +1,5 @@
 /local-runner
 out
+.gradle
+.idea
+build

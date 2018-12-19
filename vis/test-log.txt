@@ -1,0 +1,47 @@
+color white
+draw-rect 5 5 400 300
+draw-line 5 5 0 10
+draw-line 0 10 5 300
+---
+color blue
+fill-rect 10 10 100 100
+color red
+fill-circle 200 200 50
+color white
+string 200 200 i am a circle!
+color yellow
+fill-arc 100 300 50 30 300
+color green
+draw-poly 123 21 251 2 521 55 22 251 52 5
+%
+color red
+fill-poly 100 50 150 100 100 150 50 100
+>
+player1 score = 0
+player2 score = 0
+-
+ololo
+first step
+
+there was an empty line above
+
+
+two empty lines!
+---
+color blue
+fill-rect 15 15 100 100
+color red
+fill-circle 150 150 50
+color white
+string 150 150 still a circle!
+color yellow
+fill-arc 120 280 50 30 300
+%
+color red
+fill-poly 100 60 160 100 100 140 40 100
+>
+player1 score = 100
+player2 score = 0
+-
+ololo
+second step

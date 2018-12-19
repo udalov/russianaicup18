@@ -1,0 +1,39 @@
+apply plugin: "application"
+apply plugin: "kotlin"
+
+mainClassName = "vis.MainKt"
+applicationDefaultJvmArgs = ["-ea", "-Xmx4G"]
+
+buildscript {
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+
+    repositories {
+        maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
+        mavenCentral()
+    }
+}
+
+repositories {
+    maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+}
+
+sourceSets {
+    main {
+        java.srcDir "src"
+    }
+}
+
+run {
+    if (project.hasProperty("testVis")) {
+        args = ["test-log.txt"]
+    } else {
+        args = ["/Users/udalov/c/russianaicup16/out/log.txt"]
+    }
+}
