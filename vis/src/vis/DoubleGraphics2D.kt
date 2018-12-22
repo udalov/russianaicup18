@@ -68,13 +68,13 @@ class DoubleGraphics2D(val g: Graphics2D) {
     }
 
     @JvmOverloads
-    fun drawArc(x: Double, y: Double, radius: Double, startAngle: Double, endAngle: Double, type: Int = Arc2D.OPEN) {
-        g.draw(Arc2D.Double(x - radius, y - radius, radius + radius, radius + radius, startAngle, endAngle, type))
+    fun drawArc(x: Double, y: Double, radius: Double, startAngle: Double, extent: Double, type: Int = Arc2D.OPEN) {
+        g.draw(Arc2D.Double(x - radius, y - radius, radius + radius, radius + radius, startAngle, extent, type))
     }
 
     @JvmOverloads
-    fun fillArc(x: Double, y: Double, radius: Double, startAngle: Double, endAngle: Double, type: Int = Arc2D.OPEN) {
-        g.fill(Arc2D.Double(x - radius, y - radius, radius + radius, radius + radius, startAngle, endAngle, type))
+    fun fillArc(x: Double, y: Double, radius: Double, startAngle: Double, extent: Double, type: Int = Arc2D.OPEN) {
+        g.fill(Arc2D.Double(x - radius, y - radius, radius + radius, radius + radius, startAngle, extent, type))
     }
 
     fun drawLine(x1: Double, y1: Double, x2: Double, y2: Double) {

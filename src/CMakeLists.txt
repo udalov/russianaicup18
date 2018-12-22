@@ -21,7 +21,9 @@ add_library(russianaicup
     Strategy.cpp
 
     MyStrategy.cpp
+    Simulation.cpp
     Vis.cpp
+    Vec.cpp
 )
 
 add_executable(Runner DefaultRunner.cpp)
