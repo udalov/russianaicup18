@@ -20,8 +20,10 @@ add_library(russianaicup
     Runner.cpp
     Strategy.cpp
 
+    Move.cpp
     MyStrategy.cpp
     Simulation.cpp
+    State.cpp
     Vis.cpp
     Vec.cpp
 )

@@ -11,4 +11,6 @@ struct Move {
 
     Move(const Vec& targetVelocity, double jumpSpeed) :
         targetVelocity(targetVelocity), jumpSpeed(jumpSpeed) {}
+
+    std::string toString() const;
 };

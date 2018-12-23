@@ -1,5 +1,7 @@
 #include "Vec.h"
 
+#include <sstream>
+
 using namespace std;
 
 void Vec::clamp(double length) {
@@ -12,5 +14,8 @@ void Vec::clamp(double length) {
 }
 
 string Vec::toString() const {
-    return string("(") + to_string(x) + ", " + to_string(y) + ", " + to_string(z) + ")";
+    ostringstream out;
+    out.precision(3);
+    out << fixed << "(" << x << ", " << y << ", " << z << ")";
+    return out.str();
 }

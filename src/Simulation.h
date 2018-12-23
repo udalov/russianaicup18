@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Move.h"
 #include "State.h"
+#include "Vis.h"
 #include "model/Rules.h"
 
-void updateRobot(RobotState& robot, double deltaTime, const model::Rules& rules, const Move& move);
+void initializeSimulation(const model::Rules& rules, Vis& vis);
 
-bool collideRobotArena(RobotState& robot, double deltaTime, const model::Rules& rules, Vec& result);
+void simulate(State& state, int ticks);

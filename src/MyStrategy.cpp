@@ -17,28 +17,21 @@ MyStrategy::MyStrategy() { }
 
 unique_ptr<Vis> vis = nullptr;
 
-void simulateRobotSameMove(RobotState& robot, const Rules& rules, const Move& move) {
-    const int ticks = 20;
-    const int microticks = rules.MICROTICKS_PER_TICK;
+void simulateRobotSameMove(RobotState& robot, BallState& ball, const Rules& rules, const Move& move) {
+    vis->addLog(robot.toString());
+    vis->addLog(ball.toString());
+    vis->addLog(move.toString());
+    vis->addLog("");
 
-    Vec collisionNormal;
-    for (int tick = 1; tick <= ticks; tick++) {
-        double deltaTime = 1.0 / rules.TICKS_PER_SECOND / microticks;
-        for (int _ = 1; _ <= microticks; _++) {
-            updateRobot(robot, deltaTime, rules, move);
-            if (collideRobotArena(robot, deltaTime, rules, collisionNormal)) {
-                robot.touch = true;
-                robot.touchNormal = collisionNormal;
-            } else {
-                robot.touch = false;
-            }
+    auto state = State(
+        robot,
+        ball,
+        [&](int id, int tick) {
+            return move;
         }
-        Vec pos = robot.position;
-        double radius = robot.radius;
-        vis->addAction([=](Vis& v) {
-            v.drawSphere(pos.x, pos.y, pos.z, radius, Color::ME.alpha(0.25 + ((ticks - tick) / 3.0 / ticks)));
-        });
-    }
+    );
+
+    simulate(state, 20);
 }
 
 void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Action& action) {
@@ -50,6 +43,7 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
     if (tick == 0) {
         vis = make_unique<Vis>(rules.arena);
         vis->drawArena();
+        initializeSimulation(rules, *vis);
     }
 
     auto pos = Vec(me.x, me.y, me.z);
@@ -67,7 +61,11 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
     }
 
     auto robot = RobotState(me.id, pos, velocity, me.radius);
-    simulateRobotSameMove(robot, rules, ans);
+    auto ball = BallState(
+        Vec(game.ball.x, game.ball.y, game.ball.z),
+        Vec(game.ball.velocity_x, game.ball.velocity_y, game.ball.velocity_z)
+    );
+    simulateRobotSameMove(robot, ball, rules, ans);
 
     /*
     velocity.clamp(rules.ROBOT_MAX_GROUND_SPEED);
@@ -84,7 +82,7 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
     action.target_velocity_z = ans.targetVelocity.z;
     action.jump_speed = ans.jumpSpeed;
 
-    if (tick < 3000) {
+    if (tick < 500) {
         vis->drawGame(me, game);
     } else {
         terminate();
