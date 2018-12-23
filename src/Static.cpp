@@ -1,5 +1,6 @@
 #include "Static.h"
 
+#include <algorithm>
 #include <vector>
 
 using namespace model;
@@ -31,4 +32,8 @@ const Arena& getArena() {
 
 bool isAlly(int robotId) {
     return find(allyIds.begin(), allyIds.end(), robotId) != allyIds.end();
+}
+
+bool isCaptain(int robotId) {
+    return find_if(allyIds.begin(), allyIds.end(), [=](int id) { return id < robotId; }) == allyIds.end();
 }

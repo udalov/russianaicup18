@@ -10,3 +10,6 @@ const model::Rules& getRules();
 const model::Arena& getArena();
 
 bool isAlly(int robotId);
+
+// Return true if this id is minimal among all ally robot ids
+bool isCaptain(int robotId);

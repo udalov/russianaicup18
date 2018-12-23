@@ -22,6 +22,7 @@ add_library(russianaicup
 
     Move.cpp
     MyStrategy.cpp
+    QuickStartGuy.cpp
     Simulation.cpp
     State.cpp
     Static.cpp
