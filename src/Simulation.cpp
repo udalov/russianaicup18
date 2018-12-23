@@ -1,5 +1,6 @@
 #include "Simulation.h"
 
+#include "Static.h"
 #include <algorithm>
 
 using namespace model;
@@ -15,20 +16,6 @@ struct Dan {
     Dan(double distance, const Vec& normal) :
         distance(distance), normal(normal) {}
 };
-
-namespace {
-    const Rules *rules = nullptr;
-    Vis *vis = nullptr;
-}
-
-const Rules& getRules() {
-    return *rules;
-}
-
-void initializeSimulation(const Rules& initRules, Vis& initVis) {
-    rules = &initRules;
-    vis = &initVis;
-}
 
 void danToPlane(const Vec& point, const Vec& pointOnPlane, const Vec& planeNormal, Dan& result) {
     auto distance = (point - pointOnPlane).dot(planeNormal);
@@ -55,7 +42,7 @@ void danToSphereOuter(const Vec& point, const Vec& center, double radius, Dan& r
 }
 
 void danToArenaQuarter(const Vec& point, Dan& result) {
-    auto& arena = rules->arena;
+    auto& arena = getArena();
 
     // Ground
     danToPlane(point, Vec(0, 0, 0), Vec(0, 1, 0), result);
@@ -192,22 +179,24 @@ void danToArena(Vec point, Dan& result) {
 
 template<typename Unit>
 void moveUnit(Unit& unit, double deltaTime) {
-    unit.velocity.clamp(rules->MAX_ENTITY_SPEED);
+    unit.velocity.clamp(getRules().MAX_ENTITY_SPEED);
     unit.position += unit.velocity * deltaTime;
-    double tmp = rules->GRAVITY * deltaTime;
+    double tmp = getRules().GRAVITY * deltaTime;
     unit.position.y -= tmp * deltaTime / 2;
     unit.velocity.y -= tmp;
 }
 
 void updateRobot(RobotState& robot, double deltaTime, const Move& move) {
+    auto& rules = getRules();
+
     if (robot.touch) {
         auto targetVelocity = Vec(move.targetVelocity);
-        targetVelocity.clamp(rules->ROBOT_MAX_GROUND_SPEED);
+        targetVelocity.clamp(rules.ROBOT_MAX_GROUND_SPEED);
         targetVelocity -= robot.touchNormal * robot.touchNormal.dot(targetVelocity);
         auto targetVelocityChange = targetVelocity - robot.velocity;
         auto len = targetVelocityChange.len();
         if (len > 0) {
-            auto acceleration = rules->ROBOT_ACCELERATION * max(0.0, robot.touchNormal.y);
+            auto acceleration = rules.ROBOT_ACCELERATION * max(0.0, robot.touchNormal.y);
             auto tmp = targetVelocityChange.normalize() * acceleration * deltaTime;
             tmp.clamp(len);
             robot.velocity += tmp;
@@ -216,22 +205,22 @@ void updateRobot(RobotState& robot, double deltaTime, const Move& move) {
 
     moveUnit(robot, deltaTime);
 
-    robot.radius = rules->ROBOT_MIN_RADIUS + (rules->ROBOT_MAX_RADIUS - rules->ROBOT_MIN_RADIUS) *
-        move.jumpSpeed / rules->ROBOT_MAX_JUMP_SPEED;
+    robot.radius = rules.ROBOT_MIN_RADIUS + (rules.ROBOT_MAX_RADIUS - rules.ROBOT_MIN_RADIUS) *
+        move.jumpSpeed / rules.ROBOT_MAX_JUMP_SPEED;
     robot.radiusChangeSpeed = move.jumpSpeed;
 }
 
 template<typename Unit> double getUnitRadius(const Unit& unit);
 template<> double getUnitRadius(const RobotState& unit) { return unit.radius; }
-template<> double getUnitRadius(const BallState& unit) { return rules->BALL_RADIUS; }
+template<> double getUnitRadius(const BallState& unit) { return getRules().BALL_RADIUS; }
 
 template<typename Unit> double getUnitRadiusChangeSpeed(const Unit& unit);
 template<> double getUnitRadiusChangeSpeed(const RobotState& unit) { return unit.radiusChangeSpeed; }
 template<> double getUnitRadiusChangeSpeed(const BallState& unit) { return 0.0; }
 
 template<typename Unit> double getArenaE();
-template<> double getArenaE<RobotState>() { return rules->ROBOT_ARENA_E; }
-template<> double getArenaE<BallState>() { return rules->BALL_ARENA_E; }
+template<> double getArenaE<RobotState>() { return getRules().ROBOT_ARENA_E; }
+template<> double getArenaE<BallState>() { return getRules().BALL_ARENA_E; }
 
 template<typename Unit>
 bool collideWithArena(Unit& unit, double deltaTime, Vec& result) {
@@ -251,41 +240,49 @@ bool collideWithArena(Unit& unit, double deltaTime, Vec& result) {
 }
 
 void update(State& state, int tick, double deltaTime) {
-    auto& robot = state.me;
-    auto move = state.moves(state.me.id, tick);
-
-    updateRobot(robot, deltaTime, move);
+    for (auto& robot : state.robots) {
+        updateRobot(robot, deltaTime, state.moves(robot, tick));
+    }
 
     moveUnit(state.ball, deltaTime);
 
     Vec collisionNormal;
-    if (collideWithArena(robot, deltaTime, collisionNormal)) {
-        robot.touch = true;
-        robot.touchNormal = collisionNormal;
-    } else {
-        robot.touch = false;
+    for (auto& robot : state.robots) {
+        if (collideWithArena(robot, deltaTime, collisionNormal)) {
+            robot.touch = true;
+            robot.touchNormal = collisionNormal;
+        } else {
+            robot.touch = false;
+        }
     }
 
     collideWithArena(state.ball, deltaTime, collisionNormal);
 }
 
-void simulate(State& state, int ticks) {
-    const int microticks = rules->MICROTICKS_PER_TICK;
+void simulate(State& state, int ticks, Vis& vis) {
+    const int microticks = getRules().MICROTICKS_PER_TICK;
+
+    auto myId = state.myId;
 
     for (int tick = 1; tick <= ticks; tick++) {
-        auto deltaTime = 1.0 / rules->TICKS_PER_SECOND / microticks;
+        auto deltaTime = 1.0 / getRules().TICKS_PER_SECOND / microticks;
         for (int _ = 1; _ <= microticks; _++) {
             update(state, tick, deltaTime);
         }
 
-        auto myPos = state.me.position;
-        auto radius = state.me.radius;
+        for (auto& robot : state.robots) {
+            auto pos = robot.position;
+            auto radius = robot.radius;
+            auto color = robot.id == state.myId ? Color::ME : isAlly(robot.id) ? Color::ALLY : Color::ENEMY;
+            vis.addAction([=](Vis& v) {
+                v.drawSphere(pos.x, pos.y, pos.z, radius, color.alpha(0.25 + ((ticks - tick) / 3.0 / ticks)));
+            });
+        }
         auto ballPos = state.ball.position;
-        vis->addAction([=](Vis& v) {
-            v.drawSphere(myPos.x, myPos.y, myPos.z, radius, Color::ME.alpha(0.25 + ((ticks - tick) / 3.0 / ticks)));
-            v.drawSphere(ballPos.x, ballPos.y, ballPos.z, rules->BALL_RADIUS, Color::BALL.alpha(0.25 + ((ticks - tick) / 3.0 / ticks)));
+        vis.addAction([=](Vis& v) {
+            v.drawSphere(ballPos.x, ballPos.y, ballPos.z, getRules().BALL_RADIUS, Color::BALL.alpha(0.25 + ((ticks - tick) / 3.0 / ticks)));
         });
-        vis->addLog(state.me.toString());
-        vis->addLog(state.ball.toString());
+        // vis.addLog(me.toString());
+        // vis.addLog(state.ball.toString());
     }
 }

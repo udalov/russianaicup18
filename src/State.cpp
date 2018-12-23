@@ -16,3 +16,10 @@ string BallState::toString() const {
     out << "ball at=" << position.toString() << " v=" << velocity.toString();
     return out.str();
 }
+
+const RobotState& State::findMe() const {
+    for (auto& robot : robots) {
+        if (robot.id == myId) return robot;
+    }
+    terminate();
+}

@@ -24,6 +24,7 @@ add_library(russianaicup
     MyStrategy.cpp
     Simulation.cpp
     State.cpp
+    Static.cpp
     Vis.cpp
     Vec.cpp
 )

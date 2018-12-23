@@ -4,6 +4,7 @@
 #include "Vec.h"
 #include <functional>
 #include <string>
+#include <vector>
 
 struct RobotState {
     int id;
@@ -31,10 +32,13 @@ struct BallState {
 };
 
 struct State {
-    RobotState me;
+    std::vector<RobotState> robots;
     BallState ball;
-    std::function<Move(int /* id */, int /* tick (relative to current tick) */)> moves;
+    int myId;
+    std::function<Move(const RobotState&, int /* tick (relative to current tick) */)> moves;
 
-    State(const RobotState& me, const BallState& ball, std::function<Move(int, int)>&& moves) :
-        me(me), ball(ball), moves(moves) {}
+    State(std::vector<RobotState>&& robots, BallState&& ball, int myId, std::function<Move(const RobotState&, int)>&& moves) :
+        robots(robots), ball(ball), myId(myId), moves(moves) {}
+
+    const RobotState& findMe() const;
 };

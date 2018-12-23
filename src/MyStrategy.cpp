@@ -3,6 +3,7 @@
 #include "Move.h"
 #include "Simulation.h"
 #include "State.h"
+#include "Static.h"
 #include "Vec.h"
 #include "Vis.h"
 
@@ -17,21 +18,12 @@ MyStrategy::MyStrategy() { }
 
 unique_ptr<Vis> vis = nullptr;
 
-void simulateRobotSameMove(RobotState& robot, BallState& ball, const Rules& rules, const Move& move) {
-    vis->addLog(robot.toString());
-    vis->addLog(ball.toString());
-    vis->addLog(move.toString());
-    vis->addLog("");
+RobotState createRobot(const Robot& robot) {
+    return RobotState(robot.id, Vec(robot.x, robot.y, robot.z), Vec(robot.velocity_x, robot.velocity_y, robot.velocity_z), robot.radius);
+}
 
-    auto state = State(
-        robot,
-        ball,
-        [&](int id, int tick) {
-            return move;
-        }
-    );
-
-    simulate(state, 20);
+BallState createBall(const Ball& ball) {
+    return BallState(Vec(ball.x, ball.y, ball.z), Vec(ball.velocity_x, ball.velocity_y, ball.velocity_z));
 }
 
 void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Action& action) {
@@ -43,39 +35,40 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
     if (tick == 0) {
         vis = make_unique<Vis>(rules.arena);
         vis->drawArena();
-        initializeSimulation(rules, *vis);
+        initializeStatic(rules, game);
     }
-
-    auto pos = Vec(me.x, me.y, me.z);
-    auto velocity = Vec(me.velocity_x, me.velocity_y, me.velocity_z);
 
     /*
     action.target_velocity_x = (game.ball.x - me.x) * 1000.0;
     action.target_velocity_z = (game.ball.z - me.z) * 1000.0;
     */
     Move ans;
-    if (abs(pos.x) > rules.arena.width / 2 - rules.arena.bottom_radius - 2*me.radius) {
-        ans = Move(Vec(0, 0, 0), rules.ROBOT_MAX_JUMP_SPEED);
+    if (abs(me.x) > getArena().width / 2 - getArena().bottom_radius - 2*me.radius) {
+        ans = Move(Vec(0, 0, 0), getRules().ROBOT_MAX_JUMP_SPEED);
     } else {
-        ans = Move(Vec(-rules.ROBOT_MAX_GROUND_SPEED, 0, 0), 0);
+        ans = Move(Vec(-getRules().ROBOT_MAX_GROUND_SPEED, 0, 0), 0);
     }
 
-    auto robot = RobotState(me.id, pos, velocity, me.radius);
-    auto ball = BallState(
-        Vec(game.ball.x, game.ball.y, game.ball.z),
-        Vec(game.ball.velocity_x, game.ball.velocity_y, game.ball.velocity_z)
+    vector<RobotState> robots;
+    transform(game.robots.begin(), game.robots.end(), back_inserter(robots), createRobot);
+
+    auto ball = createBall(game.ball);
+
+    vis->addLog(createRobot(me).toString());
+    vis->addLog(createBall(game.ball).toString());
+    vis->addLog(ans.toString());
+    vis->addLog("");
+
+    auto state = State(
+        move(robots),
+        move(ball),
+        me.id,
+        [&](const RobotState& robot, int tick) {
+            return ans;
+        }
     );
-    simulateRobotSameMove(robot, ball, rules, ans);
 
-    /*
-    velocity.clamp(rules.ROBOT_MAX_GROUND_SPEED);
-    for (int t = 1; t < 10; t++) {
-        pos += velocity * (1.0 / rules.TICKS_PER_SECOND);
-        vis->addAction([=](Vis& v) {
-            v.drawSphere(pos.x, pos.y, pos.z, me.radius, Color::ME.alpha(0.25 + ((10.0-t)/30.0)));
-        });
-    }
-    */
+    simulate(state, 50, *vis);
 
     action.target_velocity_x = ans.targetVelocity.x;
     action.target_velocity_y = ans.targetVelocity.y;
