@@ -1,5 +1,6 @@
 #include "MyStrategy.h"
 
+#include "Const.h"
 #include "Move.h"
 #include "QuickStartGuy.h"
 #include "Simulation.h"
@@ -14,6 +15,8 @@
 
 using namespace model;
 using namespace std;
+
+#define VIS 0
 
 MyStrategy::MyStrategy() { }
 
@@ -39,29 +42,23 @@ BallState createBall(const Ball& ball) {
 }
 
 void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Action& action) {
+    // printConst(rules); terminate();
+
     auto currentTick = game.current_tick;
 
     if (isCaptain(me.id)) {
         if (currentTick % 100 == 0) cout << "tick " << currentTick << endl;
 
         if (currentTick == 0) {
-            initializeStatic(rules, game);
-            vis = make_unique<Vis>(rules.arena);
-            vis->drawArena();
+            initializeStatic(game);
+            if (VIS) {
+                vis = make_unique<Vis>();
+                vis->drawArena();
+            }
         }
     }
 
-    Move *myMove = nullptr;
-
-    auto state = State(
-        createRobots(game.robots),
-        createBall(game.ball),
-        me.id,
-        [currentTick](const State& state, const RobotState& robot, int tick) {
-            // return robot.id == me.id ? *myMove : quickStartMove(state, robot);
-            return quickStartMove(state, robot, currentTick, tick);
-        }
-    );
+    auto state = State(createRobots(game.robots), createBall(game.ball), me.id);
 
     /*
     Move ans;
@@ -72,24 +69,40 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
     }
     */
 
-    Move ans = state.moves(state, state.findRobotById(me.id), 0);
-    myMove = &ans;
+    Move ans = quickStartMove(state, state.findRobotById(me.id), currentTick, 0);
 
     if (isCaptain(me.id)) {
-        vis->addLog(createRobot(me).toString());
-        vis->addLog(createBall(game.ball).toString());
-        vis->addLog(ans.toString());
-        vis->addLog("");
+        if (VIS) {
+            vis->addLog(createRobot(me).toString());
+            vis->addLog(createBall(game.ball).toString());
+            vis->addLog(ans.toString());
+            vis->addLog("");
+        }
+        
+        auto getMove = [currentTick, &ans](const State& state, const RobotState& robot, int tick) {
+            return robot.id == state.myId ? ans : quickStartMove(state, robot, currentTick, tick);
+        };
 
         for (auto& robot : state.robots) {
             if (robot.id == me.id) continue;
 
-            vis->addLog(string() + (isAlly(robot.id) ? "ally " : "enemy ") + robot.toString());
-            vis->addLog(string() + "predicted " + state.moves(state, robot, 0).toString());
-            vis->addLog("");
+            if (VIS) {
+                vis->addLog(string() + (isAlly(robot.id) ? "ally " : "enemy ") + robot.toString());
+                vis->addLog(string() + "predicted " + getMove(state, robot, 0).toString());
+                vis->addLog("");
+            }
         }
 
-        simulate(state, 50, vis.get());
+        auto ticks = 50000;
+        auto microticks = 100;
+        auto beginTime = clock();
+        simulate(state, ticks, microticks, VIS ? vis.get() : nullptr, getMove);
+        auto endTime = clock();
+        cout << ticks << " ticks x " << microticks << " microticks in " << (endTime - beginTime + 0.0) / CLOCKS_PER_SEC << "s" << endl;
+
+        auto checksum = state.ball.position.x + state.ball.position.y + state.ball.position.z;
+        for (auto& robot : state.robots) checksum += robot.position.x + robot.position.y + robot.position.z;
+        cout << "checksum " << checksum << endl;
     }
 
     action.target_velocity_x = ans.targetVelocity.x;
@@ -97,11 +110,11 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
     action.target_velocity_z = ans.targetVelocity.z;
     action.jump_speed = ans.jumpSpeed;
 
-    if (isCaptain(me.id)) {
+    if (isCaptain(me.id) && VIS) {
         vis->drawGame(me, game);
     }
 
-    if (currentTick == 5000) {
+    if (currentTick == 0) {
         terminate();
     }
 }

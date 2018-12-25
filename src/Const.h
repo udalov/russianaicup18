@@ -1,0 +1,50 @@
+#pragma once
+
+#include "model/Rules.h"
+
+#ifndef NO_CONST
+
+#define ROBOT_MIN_RADIUS 1.00
+#define ROBOT_MAX_RADIUS 1.05
+#define ROBOT_MAX_JUMP_SPEED 15.00
+#define ROBOT_ACCELERATION 100.00
+#define ROBOT_NITRO_ACCELERATION 30.00
+#define ROBOT_MAX_GROUND_SPEED 30.00
+#define ROBOT_ARENA_E 0.00
+#define ROBOT_RADIUS 1.00
+#define ROBOT_MASS 2.00
+#define TICKS_PER_SECOND 60
+#define MICROTICKS_PER_TICK 100
+#define RESET_TICKS 120
+#define BALL_ARENA_E 0.70
+#define BALL_RADIUS 2.00
+#define BALL_MASS 1.00
+#define MIN_HIT_E 0.40
+#define MAX_HIT_E 0.50
+#define MAX_ENTITY_SPEED 100.00
+#define MAX_NITRO_AMOUNT 100.00
+#define START_NITRO_AMOUNT 50.00
+#define NITRO_POINT_VELOCITY_CHANGE 0.60
+#define NITRO_PACK_X 20.00
+#define NITRO_PACK_Y 1.00
+#define NITRO_PACK_Z 30.00
+#define NITRO_PACK_RADIUS 0.50
+#define NITRO_PACK_AMOUNT 100.00
+#define NITRO_PACK_RESPAWN_TICKS 600
+#define GRAVITY 30.00
+
+#define ARENA_W 60.00
+#define ARENA_H 20.00
+#define ARENA_D 80.00
+#define ARENA_BR 3.00
+#define ARENA_TR 7.00
+#define ARENA_CR 13.00
+#define ARENA_GTR 3.00
+#define ARENA_GW 30.00
+#define ARENA_GH 10.00
+#define ARENA_GD 10.00
+#define ARENA_GSR 1.00
+
+#endif
+
+void printConst(const model::Rules& rules);

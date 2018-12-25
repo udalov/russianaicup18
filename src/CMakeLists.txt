@@ -20,6 +20,7 @@ add_library(russianaicup
     Runner.cpp
     Strategy.cpp
 
+    Const.cpp
     Move.cpp
     MyStrategy.cpp
     QuickStartGuy.cpp

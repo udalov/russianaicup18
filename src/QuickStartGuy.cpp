@@ -1,5 +1,6 @@
 #include "QuickStartGuy.h"
 
+#include "Const.h"
 #include "Static.h"
 #include <iostream>
 
@@ -17,7 +18,7 @@ Move quickStartMove(const State& state, const RobotState& me, int tick, int delt
     auto ballV = state.ball.velocity;
     auto pos = me.position;
 
-    auto jump = ball.sqrDist(pos) < sqr(getRules().BALL_RADIUS + getRules().ROBOT_MAX_RADIUS) && pos.y < ball.y;
+    auto jump = ball.sqrDist(pos) < sqr(BALL_RADIUS + ROBOT_MAX_RADIUS) && pos.y < ball.y;
 
     auto isAttacker = false;
     for (auto& robot : state.robots) {
@@ -34,32 +35,37 @@ Move quickStartMove(const State& state, const RobotState& me, int tick, int delt
     */
 
     if (isAttacker) {
-        for (int i = 0; i < 100; i++) {
+        auto increment = ballV * 0.1;
+        auto ballPos = ball - increment;
+        for (int i = 1; i <= 100; i++) {
+            /*
             auto t = i * 0.1;
             auto ballPos = ball + ballV * t;
+            */
+            ballPos += increment;
 
-            if (ballPos.z*inv > pos.z*inv && abs(ballPos.x) < getArena().width / 2 && abs(ballPos.z) < getArena().depth / 2) {
+            if (ballPos.z*inv > pos.z*inv && abs(ballPos.x) < ARENA_W / 2 && abs(ballPos.z) < ARENA_D / 2) {
                 auto deltaPos = Vec(ballPos.x - pos.x, 0, ballPos.z - pos.z);
                 auto deltaPosDist = deltaPos.len();
-                auto needSpeed = deltaPosDist / t;
-                if (0.5 * getRules().ROBOT_MAX_GROUND_SPEED < needSpeed && needSpeed < getRules().ROBOT_MAX_GROUND_SPEED) {
-                    auto targetVelocity = deltaPos * (1 / t);
-                    return Move(targetVelocity, jump ? getRules().ROBOT_MAX_JUMP_SPEED : 0);
+                auto needSpeed = deltaPosDist * 10.0 / i;
+                if (0.5 * ROBOT_MAX_GROUND_SPEED < needSpeed && needSpeed < ROBOT_MAX_GROUND_SPEED) {
+                    auto targetVelocity = deltaPos * (10.0 / i);
+                    return Move(targetVelocity, jump ? ROBOT_MAX_JUMP_SPEED : 0);
                 }
             }
         }
     }
 
-    auto targetPos = Vec(0, 0, -getArena().depth / 2 + getArena().bottom_radius);
+    auto targetPos = Vec(0, 0, -ARENA_D / 2 + ARENA_BR);
     if (ballV.z*inv < -1e-5) {
         auto t = (targetPos.z*inv - ball.z) / ballV.z;
         auto x = ball.x + ballV.x * t;
-        if (abs(x) < getArena().goal_width / 2) {
+        if (abs(x) < ARENA_GW / 2) {
             targetPos.x = x;
         }
     }
 
     auto targetVelocity = Vec(targetPos.x - pos.x, 0, targetPos.z*inv - pos.z);
-    targetVelocity *= getRules().ROBOT_MAX_GROUND_SPEED;
-    return Move(targetVelocity, jump ? getRules().ROBOT_MAX_JUMP_SPEED : 0);
+    targetVelocity *= ROBOT_MAX_GROUND_SPEED;
+    return Move(targetVelocity, jump ? ROBOT_MAX_JUMP_SPEED : 0);
 }

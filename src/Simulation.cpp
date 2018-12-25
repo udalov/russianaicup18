@@ -1,5 +1,6 @@
 #include "Simulation.h"
 
+#include "Const.h"
 #include "Static.h"
 #include <array>
 #include <algorithm>
@@ -18,92 +19,98 @@ struct Dan {
         distance(distance), normal(normal) {}
 };
 
-void danToPlane(const Vec& point, const Vec& pointOnPlane, const Vec& planeNormal, Dan& result) {
-    auto distance = (point - pointOnPlane).dot(planeNormal);
+void danToPlane(const Vec& point, Vec&& pointOnPlane, Vec&& planeNormal, Dan& result) {
+    pointOnPlane -= point;
+    auto distance = -pointOnPlane.dot(planeNormal);
     if (distance < result.distance) {
         result.distance = distance;
         result.normal = planeNormal;
     }
 }
 
-void danToSphereInner(const Vec& point, const Vec& center, double radius, Dan& result) {
-    auto distance = radius - (point - center).len();
+void danToSphereInner(const Vec& point, Vec&& center, double radius, Dan& result) {
+    center -= point;
+    auto distance = radius - center.len();
     if (distance < result.distance) {
         result.distance = distance;
-        result.normal = (center - point).normalize();
+        result.normal = center.normalize();
     }
 }
 
-void danToSphereOuter(const Vec& point, const Vec& center, double radius, Dan& result) {
-    auto distance = (point - center).len() - radius;
+void danToSphereOuter(const Vec& point, Vec&& center, double radius, Dan& result) {
+    center -= point;
+    auto distance = center.len() - radius;
     if (distance < result.distance) {
         result.distance = distance;
-        result.normal = (point - center).normalize();
+        center *= -1;
+        result.normal = center.normalize();
     }
 }
 
 void danToArenaQuarter(const Vec& point, Dan& result) {
-    auto& arena = getArena();
-
     // Ground
     danToPlane(point, Vec(0, 0, 0), Vec(0, 1, 0), result);
 
-    // Ceiling
-    danToPlane(point, Vec(0, arena.height, 0), Vec(0, -1, 0), result);
+    if (point.y > ARENA_H - BALL_RADIUS - 1e-3) {
+        // Ceiling
+        danToPlane(point, Vec(0, ARENA_H, 0), Vec(0, -1, 0), result);
+    }
 
-    // Side x
-    danToPlane(point, Vec(arena.width / 2, 0, 0), Vec(-1, 0, 0), result);
+    if (point.x > ARENA_W / 2 - ARENA_BR - BALL_RADIUS - 1e-3) {
+        // Side x
+        danToPlane(point, Vec(ARENA_W / 2, 0, 0), Vec(-1, 0, 0), result);
+    }
 
-    // Side z (goal)
-    danToPlane(point, Vec(0, 0, (arena.depth / 2) + arena.goal_depth), Vec(0, 0, -1), result);
+    if (point.z > ARENA_D / 2 + ARENA_GD - ARENA_GTR - BALL_RADIUS - 1e-3) {
+        // Side z (goal)
+        danToPlane(point, Vec(0, 0, ARENA_D / 2 + ARENA_GD), Vec(0, 0, -1), result);
+    }
 
-    // Side z
-    auto vx = point.x - (arena.goal_width / 2 - arena.goal_top_radius);
-    auto vy = point.y - (arena.goal_height - arena.goal_top_radius);
-    if (point.x >= arena.goal_width / 2 + arena.goal_side_radius ||
-        point.y >= arena.goal_height + arena.goal_side_radius ||
-        (vx > 0 && vy > 0 && sqr(vx) + sqr(vy) >= sqr(arena.goal_top_radius + arena.goal_side_radius))) {
-        danToPlane(point, Vec(0, 0, arena.depth / 2), Vec(0, 0, -1), result);
+    if (point.z > ARENA_D / 2 - BALL_RADIUS - 1e-3) {
+        // Side z
+        auto vx = point.x - (ARENA_GW / 2 - ARENA_GTR);
+        auto vy = point.y - (ARENA_GH - ARENA_GTR);
+        if (point.x >= ARENA_GW / 2 + ARENA_GSR ||
+            point.y >= ARENA_GH + ARENA_GSR ||
+            (vx > 0 && vy > 0 && sqr(vx) + sqr(vy) >= sqr(ARENA_GTR + ARENA_GSR))) {
+            danToPlane(point, Vec(0, 0, ARENA_D / 2), Vec(0, 0, -1), result);
+        }
     }
 
     // Side x & ceiling (goal)
-    if (point.z >= arena.depth / 2 + arena.goal_side_radius) {
+    if (point.z >= ARENA_D / 2 + ARENA_GSR) {
         // x
-        danToPlane(point, Vec(arena.goal_width / 2, 0, 0), Vec(-1, 0, 0), result);
+        danToPlane(point, Vec(ARENA_GW / 2, 0, 0), Vec(-1, 0, 0), result);
         // y
-        danToPlane(point, Vec(0, arena.goal_height, 0), Vec(0, -1, 0), result);
+        danToPlane(point, Vec(0, ARENA_GH, 0), Vec(0, -1, 0), result);
     }
 
     // Goal back corners
     // TODO
 
     // Corner
-    if (point.x > arena.width / 2 - arena.corner_radius && point.z > arena.depth / 2 - arena.corner_radius) {
-        auto center = Vec(arena.width / 2 - arena.corner_radius, point.y, arena.depth / 2 - arena.corner_radius);
-        danToSphereInner(point, center, arena.corner_radius, result);
+    if (point.x > ARENA_W / 2 - ARENA_CR && point.z > ARENA_D / 2 - ARENA_CR) {
+        danToSphereInner(point, Vec(ARENA_W / 2 - ARENA_CR, point.y, ARENA_D / 2 - ARENA_CR), ARENA_CR, result);
     }
 
     // Goal outer corner
-    if (point.z < arena.depth / 2 + arena.goal_side_radius) {
+    if (point.z < ARENA_D / 2 + ARENA_GSR) {
         // Side x
-        if (point.x < arena.goal_width / 2 + arena.goal_side_radius) {
-            auto center = Vec(arena.goal_width / 2 + arena.goal_side_radius, point.y, arena.depth / 2 + arena.goal_side_radius);
-            danToSphereOuter(point, center, arena.goal_side_radius, result);
+        if (point.x < ARENA_GW / 2 + ARENA_GSR) {
+            danToSphereOuter(point, Vec(ARENA_GW / 2 + ARENA_GSR, point.y, ARENA_D / 2 + ARENA_GSR), ARENA_GSR, result);
         }
 
         // Ceiling
-        if (point.y < arena.goal_height + arena.goal_side_radius) {
-            auto center = Vec(point.x, arena.goal_height + arena.goal_side_radius, arena.depth / 2 + arena.goal_side_radius);
-            danToSphereOuter(point, center, arena.goal_side_radius, result);
+        if (point.y < ARENA_GH + ARENA_GSR) {
+            danToSphereOuter(point, Vec(point.x, ARENA_GH + ARENA_GSR, ARENA_D / 2 + ARENA_GSR), ARENA_GSR, result);
         }
 
         // Top corner
-        auto o = Vec(arena.goal_width / 2 - arena.goal_top_radius, arena.goal_height - arena.goal_top_radius, 0);
+        auto o = Vec(ARENA_GW / 2 - ARENA_GTR, ARENA_GH - ARENA_GTR, 0);
         auto v = Vec(point.x, point.y, 0) - o;
         if (v.x > 0 && v.y > 0) {
-            o += v.normalize() * (arena.goal_top_radius + arena.goal_side_radius);
-            auto center = Vec(o.x, o.y, arena.depth / 2 + arena.goal_side_radius);
-            danToSphereOuter(point, center, arena.goal_side_radius, result);
+            o += v.normalize() * (ARENA_GTR + ARENA_GSR);
+            danToSphereOuter(point, Vec(o.x, o.y, ARENA_D / 2 + ARENA_GSR), ARENA_GSR, result);
         }
     }
 
@@ -111,94 +118,67 @@ void danToArenaQuarter(const Vec& point, Dan& result) {
     // TODO    
 
     // Bottom corners
-    if (point.y < arena.bottom_radius) {
+    if (point.y < ARENA_BR) {
         // Side x
-        if (point.x > arena.width / 2 - arena.bottom_radius) {
-            auto center = Vec(arena.width / 2 - arena.bottom_radius, arena.bottom_radius, point.z);
-            danToSphereInner(point, center, arena.bottom_radius, result);
+        if (point.x > ARENA_W / 2 - ARENA_BR) {
+            danToSphereInner(point, Vec(ARENA_W / 2 - ARENA_BR, ARENA_BR, point.z), ARENA_BR, result);
         }
 
         // Side z
-        if (point.z > arena.depth / 2 - arena.bottom_radius && point.x >= arena.goal_width / 2 + arena.goal_side_radius) {
-            auto center = Vec(point.x, arena.bottom_radius, arena.depth / 2 - arena.bottom_radius);
-            danToSphereInner(point, center, arena.bottom_radius, result);
+        if (point.z > ARENA_D / 2 - ARENA_BR && point.x >= ARENA_GW / 2 + ARENA_GSR) {
+            danToSphereInner(point, Vec(point.x, ARENA_BR, ARENA_D / 2 - ARENA_BR), ARENA_BR, result);
         }
 
         // Side z (goal)
-        if (point.z > arena.depth / 2 + arena.goal_depth - arena.bottom_radius) {
-            auto center = Vec(point.x, arena.bottom_radius, arena.depth / 2 + arena.goal_depth - arena.bottom_radius);
-            danToSphereInner(point, center, arena.bottom_radius, result);
+        if (point.z > ARENA_D / 2 + ARENA_GD - ARENA_BR) {
+            danToSphereInner(point, Vec(point.x, ARENA_BR, ARENA_D / 2 + ARENA_GD - ARENA_BR), ARENA_BR, result);
         }
 
         // Goal outer corner
-        auto o = Vec(
-            arena.goal_width / 2 + arena.goal_side_radius,
-            arena.depth / 2 + arena.goal_side_radius,
-            0
-        );
+        auto o = Vec(ARENA_GW / 2 + ARENA_GSR, ARENA_D / 2 + ARENA_GSR, 0);
         auto v = Vec(point.x, point.z, 0) - o;
-        if (v.x < 0 && v.y < 0 && v.sqrLen() < sqr(arena.goal_side_radius + arena.bottom_radius)) {
-            o += v.normalize() * (arena.goal_side_radius + arena.bottom_radius);
-            danToSphereInner(point, Vec(o.x, arena.bottom_radius, o.y), arena.bottom_radius, result);
+        if (v.x < 0 && v.y < 0 && v.sqrLen() < sqr(ARENA_GSR + ARENA_BR)) {
+            o += v.normalize() * (ARENA_GSR + ARENA_BR);
+            danToSphereInner(point, Vec(o.x, ARENA_BR, o.y), ARENA_BR, result);
         }
 
         // Side x (goal)
-        if (point.z >= arena.depth / 2 + arena.goal_side_radius && point.x > arena.goal_width / 2 - arena.bottom_radius) {
-            auto center = Vec(arena.goal_width / 2 - arena.bottom_radius, arena.bottom_radius, point.z);
-            danToSphereInner(point, center, arena.bottom_radius, result);
+        if (point.z >= ARENA_D / 2 + ARENA_GSR && point.x > ARENA_GW / 2 - ARENA_BR) {
+            danToSphereInner(point, Vec(ARENA_GW / 2 - ARENA_BR, ARENA_BR, point.z), ARENA_BR, result);
         }
 
         // Corner
-        if (point.x > arena.width / 2 - arena.corner_radius && point.z > arena.depth / 2 - arena.corner_radius) {
-            auto o = Vec(
-                arena.width / 2 - arena.corner_radius,
-                arena.depth / 2 - arena.corner_radius,
-                0
-            );
+        if (point.x > ARENA_W / 2 - ARENA_CR && point.z > ARENA_D / 2 - ARENA_CR) {
+            auto o = Vec(ARENA_W / 2 - ARENA_CR, ARENA_D / 2 - ARENA_CR, 0);
             auto n = Vec(point.x, point.z, 0) - o;
             auto sqrDist = n.sqrLen();
-            if (sqrDist > sqr(arena.corner_radius - arena.bottom_radius)) {
-                o += n * ((arena.corner_radius - arena.bottom_radius) / sqrt(sqrDist));
-                danToSphereInner(point, Vec(o.x, arena.bottom_radius, o.y), arena.bottom_radius, result);
+            if (sqrDist > sqr(ARENA_CR - ARENA_BR)) {
+                o += n * ((ARENA_CR - ARENA_BR) / sqrt(sqrDist));
+                danToSphereInner(point, Vec(o.x, ARENA_BR, o.y), ARENA_BR, result);
             }
         }
     }
 
     // Ceiling corners
-    if (point.y > arena.height - arena.top_radius) {
+    if (point.y > ARENA_H - ARENA_TR) {
         // Side x
-        if (point.x > arena.width / 2 - arena.top_radius) {
-            auto center = Vec(
-                arena.width / 2 - arena.top_radius,
-                arena.height - arena.top_radius,
-                point.z
-            );
-            danToSphereInner(point, center, arena.top_radius, result);
+        if (point.x > ARENA_W / 2 - ARENA_TR) {
+            danToSphereInner(point, Vec(ARENA_W / 2 - ARENA_TR, ARENA_H - ARENA_TR, point.z), ARENA_TR, result);
         }
 
         // Side z
-        if (point.z > arena.depth / 2 - arena.top_radius) {
-            auto center = Vec(
-                point.x,
-                arena.height - arena.top_radius,
-                arena.depth / 2 - arena.top_radius
-            );
-            danToSphereInner(point, center, arena.top_radius, result);
+        if (point.z > ARENA_D / 2 - ARENA_TR) {
+            danToSphereInner(point, Vec(point.x, ARENA_H - ARENA_TR, ARENA_D / 2 - ARENA_TR), ARENA_TR, result);
         }
 
         // Corner
-        if (point.x > arena.width / 2 - arena.corner_radius && point.z > arena.depth / 2 - arena.corner_radius) {
-            auto o = Vec(
-                arena.width / 2 - arena.corner_radius,
-                0,
-                arena.depth / 2 - arena.corner_radius
-            );
+        if (point.x > ARENA_W / 2 - ARENA_CR && point.z > ARENA_D / 2 - ARENA_CR) {
+            auto o = Vec(ARENA_W / 2 - ARENA_CR, 0, ARENA_D / 2 - ARENA_CR);
             auto dv = Vec(point.x, 0, point.z) - o;
-            if (dv.sqrLen() > sqr(arena.corner_radius - arena.top_radius)) {
+            if (dv.sqrLen() > sqr(ARENA_CR - ARENA_TR)) {
                 auto n = dv.normalize();
-                o += n * (arena.corner_radius - arena.top_radius);
-                auto center = Vec(o.x, arena.height - arena.top_radius, o.z);
-                danToSphereInner(point, center, arena.top_radius, result);
+                o += n * (ARENA_CR - ARENA_TR);
+                danToSphereInner(point, Vec(o.x, ARENA_H - ARENA_TR, o.z), ARENA_TR, result);
             }
         }
     }
@@ -216,24 +196,22 @@ void danToArena(Vec point, Dan& result) {
 
 template<typename Unit>
 void moveUnit(Unit& unit, double deltaTime) {
-    unit.velocity.clamp(getRules().MAX_ENTITY_SPEED);
+    unit.velocity.clamp(MAX_ENTITY_SPEED);
     unit.position += unit.velocity * deltaTime;
-    double tmp = getRules().GRAVITY * deltaTime;
+    double tmp = GRAVITY * deltaTime;
     unit.position.y -= tmp * deltaTime / 2;
     unit.velocity.y -= tmp;
 }
 
 void updateRobot(RobotState& robot, double deltaTime, const Move& move) {
-    auto& rules = getRules();
-
     if (robot.touch) {
         auto targetVelocity = Vec(move.targetVelocity);
-        targetVelocity.clamp(rules.ROBOT_MAX_GROUND_SPEED);
+        targetVelocity.clamp(ROBOT_MAX_GROUND_SPEED);
         targetVelocity -= robot.touchNormal * robot.touchNormal.dot(targetVelocity);
         auto targetVelocityChange = targetVelocity - robot.velocity;
         auto len = targetVelocityChange.len();
         if (len > 0) {
-            auto acceleration = rules.ROBOT_ACCELERATION * max(0.0, robot.touchNormal.y);
+            auto acceleration = ROBOT_ACCELERATION * max(0.0, robot.touchNormal.y);
             auto tmp = targetVelocityChange.normalize() * acceleration * deltaTime;
             tmp.clamp(len);
             robot.velocity += tmp;
@@ -242,48 +220,50 @@ void updateRobot(RobotState& robot, double deltaTime, const Move& move) {
 
     moveUnit(robot, deltaTime);
 
-    robot.radius = rules.ROBOT_MIN_RADIUS + (rules.ROBOT_MAX_RADIUS - rules.ROBOT_MIN_RADIUS) *
-        move.jumpSpeed / rules.ROBOT_MAX_JUMP_SPEED;
+    robot.radius = ROBOT_MIN_RADIUS + (ROBOT_MAX_RADIUS - ROBOT_MIN_RADIUS) *
+        move.jumpSpeed / ROBOT_MAX_JUMP_SPEED;
     robot.radiusChangeSpeed = move.jumpSpeed;
 }
 
-template<typename Unit> double getUnitRadius(const Unit& unit);
-template<> double getUnitRadius(const RobotState& unit) { return unit.radius; }
-template<> double getUnitRadius(const BallState& unit) { return getRules().BALL_RADIUS; }
+template<typename Unit> constexpr double getUnitRadius(const Unit& unit);
+template<> constexpr double getUnitRadius(const RobotState& unit) { return unit.radius; }
+template<> constexpr double getUnitRadius(const BallState& unit) { return BALL_RADIUS; }
 
-template<typename Unit> double getUnitRadiusChangeSpeed(const Unit& unit);
-template<> double getUnitRadiusChangeSpeed(const RobotState& unit) { return unit.radiusChangeSpeed; }
-template<> double getUnitRadiusChangeSpeed(const BallState& unit) { return 0.0; }
+template<typename Unit> constexpr double getUnitRadiusChangeSpeed(const Unit& unit);
+template<> constexpr double getUnitRadiusChangeSpeed(const RobotState& unit) { return unit.radiusChangeSpeed; }
+template<> constexpr double getUnitRadiusChangeSpeed(const BallState& unit) { return 0.0; }
 
-template<typename Unit> double getArenaE();
-template<> double getArenaE<RobotState>() { return getRules().ROBOT_ARENA_E; }
-template<> double getArenaE<BallState>() { return getRules().BALL_ARENA_E; }
+template<typename Unit> constexpr double getArenaE();
+template<> constexpr double getArenaE<RobotState>() { return ROBOT_ARENA_E; }
+template<> constexpr double getArenaE<BallState>() { return BALL_ARENA_E; }
 
-template<typename Unit> double getUnitMass();
-template<> double getUnitMass<RobotState>() { return getRules().ROBOT_MASS; }
-template<> double getUnitMass<BallState>() { return getRules().BALL_MASS; }
+template<typename Unit> constexpr double getUnitMass();
+template<> constexpr double getUnitMass<RobotState>() { return ROBOT_MASS; }
+template<> constexpr double getUnitMass<BallState>() { return BALL_MASS; }
 
 template<typename Unit>
 void collideEntities(RobotState& a, Unit& b) {
-    auto deltaPosition = b.position - a.position;
-    // TODO: optimize
-    auto distance = deltaPosition.len();
-    auto penetration = a.radius + getUnitRadius(b) - distance;
-    if (penetration > 0) {
-        auto amass = getRules().ROBOT_MASS;
-        auto bmass = getUnitMass<Unit>();
-        auto ka = (1 / amass) / ((1 / amass) + (1 / bmass));
-        auto kb = (1 / bmass) / ((1 / amass) + (1 / bmass));
-        auto normal = deltaPosition.normalize();
-        a.position -= normal * penetration * ka;
-        b.position += normal * penetration * kb;
-        auto deltaVelocity = (b.velocity - a.velocity).dot(normal) + getUnitRadiusChangeSpeed(b) - a.radiusChangeSpeed;
-        if (deltaVelocity < 0) {
-            auto random = (getRules().MIN_HIT_E + getRules().MAX_HIT_E) / 2;
-            auto impulse = normal * ((1 + random) * deltaVelocity);
-            a.velocity += impulse * ka;
-            b.velocity -= impulse * kb;
-        }
+    auto d = b.position - a.position;
+    auto needed = a.radius + getUnitRadius(b);
+    if (d.x > needed || d.x < -needed || d.y > needed || d.y < -needed || d.z > needed || d.z < -needed) return;
+
+    auto penetration = needed - d.len();
+    if (penetration <= 0) return;
+
+    constexpr auto amass = ROBOT_MASS;
+    constexpr auto bmass = getUnitMass<Unit>();
+    constexpr auto ka = (1 / amass) / ((1 / amass) + (1 / bmass));
+    constexpr auto kb = (1 / bmass) / ((1 / amass) + (1 / bmass));
+    auto normal = d.normalize();
+    a.position -= normal * penetration * ka;
+    b.position += normal * penetration * kb;
+    auto deltaSpeed = (b.velocity - a.velocity).dot(normal) + getUnitRadiusChangeSpeed(b) - a.radiusChangeSpeed;
+    if (deltaSpeed < 0) {
+        // constexpr auto random = (MIN_HIT_E + MAX_HIT_E) / 2;
+        constexpr auto random = MAX_HIT_E;
+        auto impulse = normal * ((1 + random) * deltaSpeed);
+        a.velocity += impulse * ka;
+        b.velocity -= impulse * kb;
     }
 }
 
@@ -337,12 +317,10 @@ void update(State& state, int tick, double deltaTime) {
     collideWithArena(state.ball, deltaTime, collisionNormal);
 }
 
-void simulate(State& state, int ticks, Vis *vis) {
-    const int microticks = getRules().MICROTICKS_PER_TICK;
-
+void simulate(State& state, int ticks, int microticks, Vis *vis, const function<Move(const State&, const RobotState&, int)>& getMove) {
     for (int tick = 0; tick < ticks; tick++) {
         for (size_t i = 0; i < state.robots.size(); i++) {
-            moves[i] = state.moves(state, state.robots[i], tick);
+            moves[i] = getMove(state, state.robots[i], tick);
         }
 
         /*
@@ -353,7 +331,7 @@ void simulate(State& state, int ticks, Vis *vis) {
         }
         */
 
-        auto deltaTime = 1.0 / getRules().TICKS_PER_SECOND / microticks;
+        auto deltaTime = 1.0 / TICKS_PER_SECOND / microticks;
         for (int _ = 1; _ <= microticks; _++) {
             update(state, tick, deltaTime);
         }
@@ -372,7 +350,7 @@ void simulate(State& state, int ticks, Vis *vis) {
             }
             auto ballPos = state.ball.position;
             vis->addAction([=](Vis& v) {
-                v.drawSphere(ballPos.x, ballPos.y, ballPos.z, getRules().BALL_RADIUS, Color::BALL.alpha(0.25 + ((ticks - tick) / 3.0 / ticks)));
+                v.drawSphere(ballPos.x, ballPos.y, ballPos.z, BALL_RADIUS, Color::BALL.alpha(0.25 + ((ticks - tick) / 3.0 / ticks)));
             });
             if (tick < 2) {
                 vis->addLog(string() + "+" + to_string(tick) + " " + state.ball.toString());

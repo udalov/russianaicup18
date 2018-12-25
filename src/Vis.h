@@ -1,6 +1,5 @@
 #pragma once
 
-#include "model/Arena.h"
 #include "model/Game.h"
 #include "model/Robot.h"
 
@@ -33,14 +32,13 @@ class Vis {
         std::vector<std::function<void(Vis&)>> actions;
         std::vector<std::string> logs;
 
-        model::Arena arena;
         double OXZ_DX, OXZ_DY, OXY_DX, OXY_DY, OYZ_DX, OYZ_DY;
 
         Color lastColor;
         double trX, trY;
 
     public:
-        Vis(const model::Arena& arena);
+        Vis();
 
         void drawArena();
         void drawGame(const model::Robot& me, const model::Game& game);

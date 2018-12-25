@@ -1,5 +1,7 @@
 #include "Vis.h"
 
+#include "Const.h"
+
 using namespace model;
 using namespace std;
 
@@ -11,17 +13,16 @@ Color Color::ENEMY = Color(255, 150, 150);
 Color Color::BALL = Color(40, 255, 40);
 Color Color::WHITE = Color(255, 255, 255);
 
-Vis::Vis(const Arena& arena) :
+Vis::Vis() :
     vis("/Users/udalov/c/russianaicup18/src/out/log.txt"),
     actions(),
     logs(),
-    arena(arena),
-    OXZ_DX(1 + arena.goal_depth),
+    OXZ_DX(1 + ARENA_GD),
     OXZ_DY(3),
-    OXY_DX(1 + arena.goal_depth + arena.depth + arena.goal_depth + 1),
+    OXY_DX(1 + ARENA_GD + ARENA_D + ARENA_GD + 1),
     OXY_DY(3),
-    OYZ_DX(1 + arena.goal_depth),
-    OYZ_DY(3 + arena.width + 3),
+    OYZ_DX(1 + ARENA_GD),
+    OYZ_DY(3 + ARENA_W + 3),
     lastColor(Color(-1, -1, -1)),
     trX(0.0), trY(0.0)
 {}
@@ -29,17 +30,17 @@ Vis::Vis(const Arena& arena) :
 void Vis::drawArena() {
     setColor(Color::WHITE);
 
-    auto D = arena.depth;
-    auto W = arena.width;
-    auto H = arena.height;
-    auto cr = arena.corner_radius;
-    auto tr = arena.top_radius;
-    auto br = arena.bottom_radius;
-    auto gw = arena.goal_width;
-    auto gd = arena.goal_depth;
-    auto gh = arena.goal_height;
-    auto gsr = arena.goal_side_radius;
-    auto gtr = arena.goal_top_radius;
+    auto D = ARENA_D;
+    auto W = ARENA_W;
+    auto H = ARENA_H;
+    auto cr = ARENA_CR;
+    auto tr = ARENA_TR;
+    auto br = ARENA_BR;
+    auto gw = ARENA_GW;
+    auto gd = ARENA_GD;
+    auto gh = ARENA_GH;
+    auto gsr = ARENA_GSR;
+    auto gtr = ARENA_GTR;
 
     // Oxz projection
 
@@ -177,9 +178,9 @@ void Vis::addLog(const string& log) {
 
 void Vis::drawSphere(double x, double y, double z, double radius, const Color& color) {
     setColor(color);
-    drawCircle(arena.depth/2 - z + OXZ_DX, arena.width/2 - x + OXZ_DY, radius);
-    drawCircle(arena.width/2 + x + OXY_DX, arena.height - y + OXY_DY, radius);
-    drawCircle(arena.depth/2 - z + OYZ_DX, arena.height - y + OYZ_DY, radius);
+    drawCircle(ARENA_D/2 - z + OXZ_DX, ARENA_W/2 - x + OXZ_DY, radius);
+    drawCircle(ARENA_W/2 + x + OXY_DX, ARENA_H - y + OXY_DY, radius);
+    drawCircle(ARENA_D/2 - z + OYZ_DX, ARENA_H - y + OYZ_DY, radius);
 }
 
 void Vis::setColor(const Color& color) {

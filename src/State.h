@@ -1,8 +1,6 @@
 #pragma once
 
-#include "Move.h"
 #include "Vec.h"
-#include <functional>
 #include <string>
 #include <vector>
 
@@ -35,10 +33,9 @@ struct State {
     std::vector<RobotState> robots;
     BallState ball;
     int myId;
-    std::function<Move(const State&, const RobotState&, int /* tick (relative to current tick) */)> moves;
 
-    State(std::vector<RobotState>&& robots, BallState&& ball, int myId, std::function<Move(const State&, const RobotState&, int)>&& moves) :
-        robots(robots), ball(ball), myId(myId), moves(moves) {}
+    State(std::vector<RobotState>&& robots, BallState&& ball, int myId) :
+        robots(robots), ball(ball), myId(myId) {}
 
     const RobotState& findRobotById(int id) const;
 };
