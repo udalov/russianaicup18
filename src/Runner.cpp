@@ -23,6 +23,6 @@ void Runner::run() {
                 strategy->act(robot, *rules, *game, actions[robot.id]);
             }
         }
-        remoteProcessClient.write(actions);
+        remoteProcessClient.write(actions, strategy->custom_rendering());
     }
 }
