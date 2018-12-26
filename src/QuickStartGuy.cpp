@@ -6,7 +6,7 @@
 
 using namespace std;
 
-Move quickStartMove(const State& state, const RobotState& me, int tick, int delta) {
+Move QuickStartGuy::getMove(const State& state, const RobotState& me, int tick, int delta) {
     if (!me.touch) {
         // TODO: use nitro
         return Move(Vec(0, -MAX_ENTITY_SPEED, 0), false);
