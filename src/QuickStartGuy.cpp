@@ -9,39 +9,47 @@ using namespace std;
 Move quickStartMove(const State& state, const RobotState& me, int tick, int delta) {
     if (!me.touch) {
         // TODO: use nitro
-        return Move();
+        return Move(Vec(0, -MAX_ENTITY_SPEED, 0), false);
     }
 
-    auto inv = isAlly(me.id) ? 1.0 : -1.0;
+    auto isMe = isAlly(me.id);
+    auto inv = isMe ? 1.0 : -1.0;
 
     auto ball = state.ball.position;
     auto ballV = state.ball.velocity;
     auto pos = me.position;
 
-    auto jump = ball.sqrDist(pos) < sqr(BALL_RADIUS + ROBOT_MAX_RADIUS) && pos.y < ball.y;
-
-    auto isAttacker = false;
-    for (auto& robot : state.robots) {
-        if (robot.id != me.id && isAlly(robot.id) == isAlly(me.id) && robot.position.z*inv < pos.z*inv) {
-            isAttacker = true;
-        }
-    }
+    auto jump = ball.sqrDist(pos) < sqr(BALL_RADIUS + ROBOT_MAX_RADIUS) && pos.z*inv < ball.z*inv;
 
     /*
-    auto DEBUG = me.id == 4 && tick == 12 && delta == 0;
+    auto DEBUG = me.id == 3 && tick == 100 && delta == 0;
     if (DEBUG) {
-        cout << me.toString() << " isAttacker=" << isAttacker << endl;
+        cout << me.toString() << " ball.distance(pos)=" << ball.distance(pos) << " pos.z=" << pos.z << " ball.z=" << ball.z << endl;
     }
     */
 
+    auto isAttacker = false;
+    if (isMe) {
+        // Not the quick start behavior: avoid defending when both bots are at the same distance to the goal,
+        // which happens in the --disable-random mode
+        isAttacker = true;
+        for (auto& robot : state.robots) {
+            if (robot.id != me.id && isAlly(robot.id) == isAlly(me.id) && robot.position.z*inv < pos.z*inv) {
+                isAttacker = false;
+            }
+        }
+    } else {
+        for (auto& robot : state.robots) {
+            if (robot.id != me.id && isAlly(robot.id) == isAlly(me.id) && robot.position.z*inv < pos.z*inv) {
+                isAttacker = true;
+            }
+        }
+    }
+
     if (isAttacker) {
         auto increment = ballV * 0.1;
-        auto ballPos = ball - increment;
+        auto ballPos = ball;
         for (int i = 1; i <= 100; i++) {
-            /*
-            auto t = i * 0.1;
-            auto ballPos = ball + ballV * t;
-            */
             ballPos += increment;
 
             if (ballPos.z*inv > pos.z*inv && abs(ballPos.x) < ARENA_W / 2 && abs(ballPos.z) < ARENA_D / 2) {

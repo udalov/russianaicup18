@@ -32,10 +32,9 @@ struct BallState {
 struct State {
     std::vector<RobotState> robots;
     BallState ball;
-    int myId;
 
-    State(std::vector<RobotState>&& robots, BallState&& ball, int myId) :
-        robots(robots), ball(ball), myId(myId) {}
+    State(std::vector<RobotState>&& robots, BallState&& ball) :
+        robots(robots), ball(ball) {}
 
     const RobotState& findRobotById(int id) const;
 };

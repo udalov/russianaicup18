@@ -47,26 +47,28 @@ void danToSphereOuter(const Vec& point, Vec&& center, double radius, Dan& result
     }
 }
 
+constexpr double EPS = 1e-3;
+
 void danToArenaQuarter(const Vec& point, Dan& result) {
     // Ground
     danToPlane(point, Vec(0, 0, 0), Vec(0, 1, 0), result);
 
-    if (point.y > ARENA_H - BALL_RADIUS - 1e-3) {
+    if (point.y > ARENA_H - BALL_RADIUS - EPS) {
         // Ceiling
         danToPlane(point, Vec(0, ARENA_H, 0), Vec(0, -1, 0), result);
     }
 
-    if (point.x > ARENA_W / 2 - ARENA_BR - BALL_RADIUS - 1e-3) {
+    if (point.x > ARENA_W / 2 - ARENA_BR - BALL_RADIUS - EPS) {
         // Side x
         danToPlane(point, Vec(ARENA_W / 2, 0, 0), Vec(-1, 0, 0), result);
     }
 
-    if (point.z > ARENA_D / 2 + ARENA_GD - ARENA_GTR - BALL_RADIUS - 1e-3) {
+    if (point.z > ARENA_D / 2 + ARENA_GD - ARENA_GTR - BALL_RADIUS - EPS) {
         // Side z (goal)
         danToPlane(point, Vec(0, 0, ARENA_D / 2 + ARENA_GD), Vec(0, 0, -1), result);
     }
 
-    if (point.z > ARENA_D / 2 - BALL_RADIUS - 1e-3) {
+    if (point.z > ARENA_D / 2 - BALL_RADIUS - EPS) {
         // Side z
         auto vx = point.x - (ARENA_GW / 2 - ARENA_GTR);
         auto vy = point.y - (ARENA_GH - ARENA_GTR);
@@ -77,7 +79,7 @@ void danToArenaQuarter(const Vec& point, Dan& result) {
         }
     }
 
-    // Side x & ceiling (goal)
+    // Side z & ceiling (goal)
     if (point.z >= ARENA_D / 2 + ARENA_GSR) {
         // x
         danToPlane(point, Vec(ARENA_GW / 2, 0, 0), Vec(-1, 0, 0), result);
@@ -94,14 +96,14 @@ void danToArenaQuarter(const Vec& point, Dan& result) {
     }
 
     // Goal outer corner
-    if (point.z < ARENA_D / 2 + ARENA_GSR) {
+    if (point.z < ARENA_D / 2 + ARENA_GSR && point.z > ARENA_D / 2 - BALL_RADIUS - EPS) {
         // Side x
-        if (point.x < ARENA_GW / 2 + ARENA_GSR) {
+        if (point.x < ARENA_GW / 2 + ARENA_GSR && point.x > ARENA_GW / 2 - BALL_RADIUS - EPS) {
             danToSphereOuter(point, Vec(ARENA_GW / 2 + ARENA_GSR, point.y, ARENA_D / 2 + ARENA_GSR), ARENA_GSR, result);
         }
 
         // Ceiling
-        if (point.y < ARENA_GH + ARENA_GSR) {
+        if (point.y < ARENA_GH + ARENA_GSR && point.y > ARENA_GH - BALL_RADIUS - EPS) {
             danToSphereOuter(point, Vec(point.x, ARENA_GH + ARENA_GSR, ARENA_D / 2 + ARENA_GSR), ARENA_GSR, result);
         }
 
@@ -115,7 +117,7 @@ void danToArenaQuarter(const Vec& point, Dan& result) {
     }
 
     // Goal inside top corners
-    // TODO    
+    // TODO
 
     // Bottom corners
     if (point.y < ARENA_BR) {
@@ -134,12 +136,14 @@ void danToArenaQuarter(const Vec& point, Dan& result) {
             danToSphereInner(point, Vec(point.x, ARENA_BR, ARENA_D / 2 + ARENA_GD - ARENA_BR), ARENA_BR, result);
         }
 
-        // Goal outer corner
-        auto o = Vec(ARENA_GW / 2 + ARENA_GSR, ARENA_D / 2 + ARENA_GSR, 0);
-        auto v = Vec(point.x, point.z, 0) - o;
-        if (v.x < 0 && v.y < 0 && v.sqrLen() < sqr(ARENA_GSR + ARENA_BR)) {
-            o += v.normalize() * (ARENA_GSR + ARENA_BR);
-            danToSphereInner(point, Vec(o.x, ARENA_BR, o.y), ARENA_BR, result);
+        if (point.x > ARENA_GW / 2 - ARENA_GSR - BALL_RADIUS - EPS && point.z > ARENA_D / 2 - ARENA_GSR - BALL_RADIUS - EPS) {
+            // Goal outer corner
+            auto o = Vec(ARENA_GW / 2 + ARENA_GSR, ARENA_D / 2 + ARENA_GSR, 0);
+            auto v = Vec(point.x, point.z, 0) - o;
+            if (v.x < 0 && v.y < 0 && v.sqrLen() < sqr(ARENA_GSR + ARENA_BR)) {
+                o += v.normalize() * (ARENA_GSR + ARENA_BR);
+                danToSphereInner(point, Vec(o.x, ARENA_BR, o.y), ARENA_BR, result);
+            }
         }
 
         // Side x (goal)
@@ -198,23 +202,23 @@ template<typename Unit>
 void moveUnit(Unit& unit, double deltaTime) {
     unit.velocity.clamp(MAX_ENTITY_SPEED);
     unit.position += unit.velocity * deltaTime;
-    double tmp = GRAVITY * deltaTime;
+    auto tmp = GRAVITY * deltaTime;
     unit.position.y -= tmp * deltaTime / 2;
     unit.velocity.y -= tmp;
 }
 
 void updateRobot(RobotState& robot, double deltaTime, const Move& move) {
     if (robot.touch) {
-        auto targetVelocity = Vec(move.targetVelocity);
-        targetVelocity.clamp(ROBOT_MAX_GROUND_SPEED);
-        targetVelocity -= robot.touchNormal * robot.touchNormal.dot(targetVelocity);
-        auto targetVelocityChange = targetVelocity - robot.velocity;
-        auto len = targetVelocityChange.len();
+        auto tv = move.targetVelocity;
+        tv.clamp(ROBOT_MAX_GROUND_SPEED);
+        tv -= robot.touchNormal * robot.touchNormal.dot(tv);
+        tv -= robot.velocity;
+        auto len = tv.len();
         if (len > 0) {
             auto acceleration = ROBOT_ACCELERATION * max(0.0, robot.touchNormal.y);
-            auto tmp = targetVelocityChange.normalize() * acceleration * deltaTime;
-            tmp.clamp(len);
-            robot.velocity += tmp;
+            tv *= (acceleration * deltaTime / len);
+            tv.clamp(len);
+            robot.velocity += tv;
         }
     }
 
@@ -259,8 +263,8 @@ void collideEntities(RobotState& a, Unit& b) {
     b.position += normal * penetration * kb;
     auto deltaSpeed = (b.velocity - a.velocity).dot(normal) + getUnitRadiusChangeSpeed(b) - a.radiusChangeSpeed;
     if (deltaSpeed < 0) {
-        // constexpr auto random = (MIN_HIT_E + MAX_HIT_E) / 2;
-        constexpr auto random = MAX_HIT_E;
+        constexpr auto random = (MIN_HIT_E + MAX_HIT_E) / 2;
+        // constexpr auto random = MAX_HIT_E;
         auto impulse = normal * ((1 + random) * deltaSpeed);
         a.velocity += impulse * ka;
         b.velocity -= impulse * kb;
@@ -326,7 +330,7 @@ void simulate(State& state, int ticks, int microticks, Vis *vis, const function<
         /*
         if (vis != nullptr) {
             auto myIndex = 0;
-            while (state.robots[myIndex].id != state.myId) myIndex++;
+            while (state.robots[myIndex].id != getCaptain()) myIndex++;
             vis->addLog(moves[myIndex].toString());
         }
         */
@@ -340,22 +344,24 @@ void simulate(State& state, int ticks, int microticks, Vis *vis, const function<
             for (auto& robot : state.robots) {
                 auto pos = robot.position;
                 auto radius = robot.radius;
-                auto color = robot.id == state.myId ? Color::ME : isAlly(robot.id) ? Color::ALLY : Color::ENEMY;
-                vis->addAction([=](Vis& v) {
-                    v.drawSphere(pos.x, pos.y, pos.z, radius, color.alpha(0.25 + ((ticks - tick) / 3.0 / ticks)));
+                auto colorBase = robot.id == getCaptain() ? Color::ME : isAlly(robot.id) ? Color::ALLY : Color::ENEMY;
+                auto color = colorBase.alpha(0.25 + ((ticks - tick) / 3.0 / ticks));
+                vis->addAction([pos, radius, color](Vis& v) {
+                    v.drawSphere(pos.x, pos.y, pos.z, radius, color);
                 });
                 if (tick < 2) {
                     vis->addLog(string() + "+" + to_string(tick) + " " + robot.toString());
                 }
             }
             auto ballPos = state.ball.position;
-            vis->addAction([=](Vis& v) {
-                v.drawSphere(ballPos.x, ballPos.y, ballPos.z, BALL_RADIUS, Color::BALL.alpha(0.25 + ((ticks - tick) / 3.0 / ticks)));
+            auto ballColor = Color::BALL.alpha(0.25 + ((ticks - tick) / 3.0 / ticks));
+            vis->addAction([ballPos, ballColor](Vis& v) {
+                v.drawSphere(ballPos.x, ballPos.y, ballPos.z, BALL_RADIUS, ballColor);
             });
             if (tick < 2) {
                 vis->addLog(string() + "+" + to_string(tick) + " " + state.ball.toString());
             }
-            // vis->addLog(state.findRobotById(state.myId).toString());
+            // vis->addLog(state.findRobotById(getCaptain()).toString());
             // vis->addLog(state.ball.toString());
         }
     }

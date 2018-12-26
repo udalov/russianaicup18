@@ -6,5 +6,5 @@ void initializeStatic(const model::Game& game);
 
 bool isAlly(int robotId);
 
-// Return true if this id is minimal among all ally robot ids
-bool isCaptain(int robotId);
+// Returns minimal id among all ally robot ids
+int getCaptain();
