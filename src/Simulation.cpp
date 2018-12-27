@@ -261,7 +261,7 @@ void collideEntities(RobotState& a, Unit& b) {
     auto normal = d.normalize();
     a.position -= normal * penetration * ka;
     b.position += normal * penetration * kb;
-    auto deltaSpeed = (b.velocity - a.velocity).dot(normal) + getUnitRadiusChangeSpeed(b) - a.radiusChangeSpeed;
+    auto deltaSpeed = (b.velocity - a.velocity).dot(normal) - getUnitRadiusChangeSpeed(b) - a.radiusChangeSpeed;
     if (deltaSpeed < 0) {
         constexpr auto random = (MIN_HIT_E + MAX_HIT_E) / 2;
         // constexpr auto random = MAX_HIT_E;
