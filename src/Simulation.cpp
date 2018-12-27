@@ -30,20 +30,21 @@ void danToPlane(const Vec& point, Vec&& pointOnPlane, Vec&& planeNormal, Dan& re
 
 void danToSphereInner(const Vec& point, Vec&& center, double radius, Dan& result) {
     center -= point;
-    auto distance = radius - center.len();
+    auto len = center.len();
+    auto distance = radius - len;
     if (distance < result.distance) {
         result.distance = distance;
-        result.normal = center.normalize();
+        result.normal = center * (1 / len);
     }
 }
 
 void danToSphereOuter(const Vec& point, Vec&& center, double radius, Dan& result) {
     center -= point;
-    auto distance = center.len() - radius;
+    auto len = center.len();
+    auto distance = len - radius;
     if (distance < result.distance) {
         result.distance = distance;
-        center *= -1;
-        result.normal = center.normalize();
+        result.normal = center * (-1 / len);
     }
 }
 
@@ -322,6 +323,8 @@ void update(State& state, int tick, double deltaTime) {
 }
 
 void simulate(State& state, int ticks, int microticks, Vis *vis, const function<Move(const State&, const RobotState&, int)>& getMove) {
+    auto deltaTime = 1.0 / TICKS_PER_SECOND / microticks;
+
     for (int tick = 0; tick < ticks; tick++) {
         for (size_t i = 0; i < state.robots.size(); i++) {
             moves[i] = getMove(state, state.robots[i], tick);
@@ -335,7 +338,6 @@ void simulate(State& state, int ticks, int microticks, Vis *vis, const function<
         }
         */
 
-        auto deltaTime = 1.0 / TICKS_PER_SECOND / microticks;
         for (int _ = 1; _ <= microticks; _++) {
             update(state, tick, deltaTime);
         }

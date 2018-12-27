@@ -147,8 +147,4 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
     if (me.id == getCaptain() && VIS) {
         vis->drawGame(me, game);
     }
-
-    if (currentTick == 5000) {
-        terminate();
-    }
 }
