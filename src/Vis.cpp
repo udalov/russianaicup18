@@ -14,7 +14,7 @@ Color Color::BALL = Color(40, 255, 40);
 Color Color::WHITE = Color(255, 255, 255);
 
 Vis::Vis() :
-    vis("/Users/udalov/c/russianaicup18/src/out/log.txt"),
+    vis("/Users/udalov/c/russianaicup18/out/log.txt"),
     actions(),
     logs(),
     OXZ_DX(1 + ARENA_GD),
