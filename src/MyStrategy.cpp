@@ -6,7 +6,7 @@
 #include "Simulation.h"
 #include "Solution.h"
 #include "State.h"
-#include "Static.h"
+#include "Team.h"
 #include "Vec.h"
 #include "Vis.h"
 
@@ -125,7 +125,7 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
 
     auto currentTick = game.current_tick;
     if (currentTick == 0) {
-        initializeStatic(game);
+        initializeTeams(game);
     }
 
     if (me.id == getCaptain()) {

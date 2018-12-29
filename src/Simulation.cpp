@@ -1,7 +1,7 @@
 #include "Simulation.h"
 
 #include "Const.h"
-#include "Static.h"
+#include "Team.h"
 #include <array>
 #include <algorithm>
 

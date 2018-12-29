@@ -27,7 +27,7 @@ add_library(russianaicup
     Simulation.cpp
     Solution.cpp
     State.cpp
-    Static.cpp
+    Team.cpp
     Vis.cpp
     Vec.cpp
 )

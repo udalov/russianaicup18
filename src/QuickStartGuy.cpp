@@ -1,7 +1,7 @@
 #include "QuickStartGuy.h"
 
 #include "Const.h"
-#include "Static.h"
+#include "Team.h"
 #include <iostream>
 
 using namespace std;
