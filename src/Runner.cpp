@@ -10,8 +10,11 @@ Runner::Runner(const char* host, const char* port, const char* token)
     : remoteProcessClient(host, atoi(port)), token(token) {
 }
 
-void Runner::run() {
-    unique_ptr<Strategy> strategy(new MyStrategy);
+void Runner::run(bool debug) {
+    unique_ptr<MyStrategy> strategy(new MyStrategy);
+    if (debug) {
+        strategy->debug = true;
+    }
     unique_ptr<Game> game;
     unordered_map<int, Action> actions;
     remoteProcessClient.write_token(token);

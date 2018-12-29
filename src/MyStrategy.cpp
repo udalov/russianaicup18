@@ -49,7 +49,7 @@ BallState createBall(const Ball& ball) {
     return BallState(Vec(ball.x, ball.y, ball.z), Vec(ball.velocity_x, ball.velocity_y, ball.velocity_z));
 }
 
-void solve(State&& state, int solverId, int currentTick) {
+void solve(State&& state, int solverId, int currentTick, bool debug) {
     if (currentTick == 0) {
         auto solution = new Solution(getAllies());
         for (auto& robot : state.robots) {
@@ -68,54 +68,56 @@ void solve(State&& state, int solverId, int currentTick) {
         }
     }
 
-    auto getMove = [currentTick, keyBase](const State& state, const RobotState& robot, int delta) {
-        if (delta == 0 && isAlly(robot.id)) {
-            return answers[keyBase + robot.id];
-        }
+    if (debug) {
+        auto getMove = [currentTick, keyBase](const State& state, const RobotState& robot, int delta) {
+            if (delta == 0 && isAlly(robot.id)) {
+                return answers[keyBase + robot.id];
+            }
 
-        return scenario[robot.id]->getMove(state, robot, currentTick, delta);
-    };
+            return scenario[robot.id]->getMove(state, robot, currentTick, delta);
+        };
 
-    if (VIS) {
-        vis->addLog(state.findRobotById(getCaptain()).toString());
-        vis->addLog(state.ball.toString());
-        vis->addLog(answers[keyBase + getCaptain()].toString());
-        vis->addLog("");
+        if (VIS) {
+            vis->addLog(state.findRobotById(getCaptain()).toString());
+            vis->addLog(state.ball.toString());
+            vis->addLog(answers[keyBase + getCaptain()].toString());
+            vis->addLog("");
 
-        for (auto& robot : state.robots) {
-            if (robot.id != getCaptain()) {
-                vis->addLog(robot.toString());
-                vis->addLog(string() + "predicted " + getMove(state, robot, 0).toString());
-                vis->addLog("");
+            for (auto& robot : state.robots) {
+                if (robot.id != getCaptain()) {
+                    vis->addLog(robot.toString());
+                    vis->addLog(string() + "predicted " + getMove(state, robot, 0).toString());
+                    vis->addLog("");
+                }
             }
         }
+
+        if (MEASURE_SIMULATION_SPEED) {
+            auto ticks = 50000;
+            auto microticks = 100;
+            auto beginTime = clock();
+            simulate(state, ticks, microticks, nullptr, getMove);
+            auto endTime = clock();
+            cout << ticks << " ticks x " << microticks << " microticks in " << (endTime - beginTime + 0.0) / CLOCKS_PER_SEC << "s" << endl;
+
+            auto checksum = state.ball.position.x + state.ball.position.y + state.ball.position.z;
+            for (auto& robot : state.robots) checksum += robot.position.x + robot.position.y + robot.position.z;
+            cout << "checksum " << checksum << endl;
+
+            throw string() + "OK";
+        }
+
+        simulate(state, 50, MICROTICKS, VIS ? vis.get() : nullptr, getMove);
     }
-
-    if (MEASURE_SIMULATION_SPEED) {
-        auto ticks = 50000;
-        auto microticks = 100;
-        auto beginTime = clock();
-        simulate(state, ticks, microticks, nullptr, getMove);
-        auto endTime = clock();
-        cout << ticks << " ticks x " << microticks << " microticks in " << (endTime - beginTime + 0.0) / CLOCKS_PER_SEC << "s" << endl;
-
-        auto checksum = state.ball.position.x + state.ball.position.y + state.ball.position.z;
-        for (auto& robot : state.robots) checksum += robot.position.x + robot.position.y + robot.position.z;
-        cout << "checksum " << checksum << endl;
-
-        throw string() + "OK";
-    }
-
-    simulate(state, 50, MICROTICKS, VIS ? vis.get() : nullptr, getMove);
 }
 
-Move solve(const Game& game, int myId) {
+Move solve(const Game& game, int myId, bool debug) {
     auto tick = game.current_tick;
     auto key = (tick << 4) + myId;
     auto answer = answers.find(key);
     if (answer != answers.end()) return answer->second;
 
-    solve(State(createRobots(game.robots), createBall(game.ball)), myId, tick);
+    solve(State(createRobots(game.robots), createBall(game.ball)), myId, tick, debug);
 
     return answers[key];
 }
@@ -128,23 +130,27 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
         initializeTeams(game);
     }
 
-    if (me.id == getCaptain()) {
-        if (currentTick % 100 == 0) cout << "tick " << currentTick << endl;
+    if (debug) {
+        if (me.id == getCaptain()) {
+            if (currentTick % 100 == 0) cout << "tick " << currentTick << endl;
+        }
+
+        if (VIS && vis == nullptr) {
+            vis = make_unique<Vis>();
+            vis->drawArena();
+        }
     }
 
-    if (VIS && vis == nullptr) {
-        vis = make_unique<Vis>();
-        vis->drawArena();
-    }
-
-    auto ans = solve(game, me.id);
+    auto ans = solve(game, me.id, debug);
 
     action.target_velocity_x = ans.targetVelocity.x;
     action.target_velocity_y = ans.targetVelocity.y;
     action.target_velocity_z = ans.targetVelocity.z;
     action.jump_speed = ans.jumpSpeed;
 
-    if (me.id == getCaptain() && VIS) {
-        vis->drawGame(me, game);
+    if (debug) {
+        if (me.id == getCaptain() && VIS) {
+            vis->drawGame(me, game);
+        }
     }
 }

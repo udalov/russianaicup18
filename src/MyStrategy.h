@@ -9,6 +9,8 @@
 
 class MyStrategy : public Strategy {
 public:
+    bool debug = false;
+
     MyStrategy();
 
     void act(const model::Robot& me, const model::Rules& rules, const model::Game& game, model::Action& action) override;

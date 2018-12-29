@@ -16,7 +16,7 @@
 #include "model/Rules.h"
 
 class RemoteProcessClient {
-    CActiveSocket socket;
+    std::unique_ptr<CActiveSocket> socket;
     std::string buffer;
     std::string readline();
     void writeline(std::string line);

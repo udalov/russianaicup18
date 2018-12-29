@@ -20,7 +20,7 @@ string RemoteProcessClient::readline() {
             buffer = buffer.substr(eol + 1);
             return line;
         }
-        int32 received = socket.Receive(BUFFER_SIZE);
+        int32 received = socket->Receive(BUFFER_SIZE);
         if (received < 0) {
             cerr << "Error reading from socket" << endl;
             exit(10002);
@@ -28,42 +28,38 @@ string RemoteProcessClient::readline() {
         if (received == 0) {
             return "";
         }
-        buffer.append(socket.GetData(), socket.GetData() + received);
+        buffer.append(socket->GetData(), socket->GetData() + received);
     }
 }
 
 void RemoteProcessClient::writeline(string line) {
     line.push_back('\n');
-    if (socket.Send(reinterpret_cast<const uint8*>(line.c_str()), static_cast<int32_t>(line.length())) < 0) {
+    if (socket->Send(reinterpret_cast<const uint8*>(line.c_str()), static_cast<int32_t>(line.length())) < 0) {
         cerr << "Failed to send data" << endl;
         exit(10003);
     }
 }
 
-RemoteProcessClient::RemoteProcessClient(string host, int port) {
-    socket.Initialize();
-    socket.DisableNagleAlgoritm();
-
-    this_thread::sleep_for(chrono::milliseconds(500));
-
-    /*
+unique_ptr<CActiveSocket> createSocket(const string& host, int port) {
     auto tryNo = 0;
-    while (!socket.Open(reinterpret_cast<const uint8*>(host.c_str()), static_cast<int16>(port))) {
+    while (true) {
+        auto socket = make_unique<CActiveSocket>();
+        socket->Initialize();
+        socket->DisableNagleAlgoritm();
+        if (socket->Open(reinterpret_cast<const uint8*>(host.c_str()), static_cast<int16>(port))) {
+            return socket;
+        }
         if (++tryNo < 20) {
             cerr << "Connecting to " << host << ":" << port << " (" << tryNo << ")..." << endl;
-            this_thread::sleep_for(chrono::milliseconds(500));
+            this_thread::sleep_for(chrono::milliseconds(50));
         } else {
             cerr << "Failed to connect to " << host << ":" << port << endl;
             exit(10001);
         }
     }
-    */
+}
 
-    if (!socket.Open(reinterpret_cast<const uint8*>(host.c_str()), static_cast<int16>(port))) {
-        cerr << "Failed to connect to " << host << ":" << port << endl;
-        exit(10001);
-    }
-
+RemoteProcessClient::RemoteProcessClient(string host, int port) : socket(createSocket(host, port)) {
     writeline("json");
 }
 
