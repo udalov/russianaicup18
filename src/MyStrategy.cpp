@@ -19,7 +19,7 @@ using namespace model;
 using namespace std;
 
 #define VIS 1
-#define MEASURE_SIMULATION_SPEED 1
+#define MEASURE_SIMULATION_SPEED 0
 
 MyStrategy::MyStrategy() { }
 
@@ -28,7 +28,6 @@ namespace {
     unordered_map<int, Move> answers;
     unordered_map<int, Scenario *> scenario;
     QuickStartGuy quickStart;
-    Solution solution;
 }
 
 RobotState createRobot(const Robot& robot) {
@@ -52,9 +51,10 @@ BallState createBall(const Ball& ball) {
 
 void solve(State&& state, int solverId, int currentTick) {
     if (currentTick == 0) {
+        auto solution = new Solution(getAllies());
         for (auto& robot : state.robots) {
             if (isAlly(robot.id)) {
-                scenario[robot.id] = &solution;
+                scenario[robot.id] = solution;
             } else {
                 scenario[robot.id] = &quickStart;
             }
@@ -106,7 +106,7 @@ void solve(State&& state, int solverId, int currentTick) {
         throw string() + "OK";
     }
 
-    simulate(state, 50, MICROTICKS_PER_TICK, VIS ? vis.get() : nullptr, getMove);
+    simulate(state, 50, MICROTICKS, VIS ? vis.get() : nullptr, getMove);
 }
 
 Move solve(const Game& game, int myId) {
