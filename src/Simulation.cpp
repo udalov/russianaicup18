@@ -278,11 +278,12 @@ bool collideWithArena(Unit& unit, double deltaTime, Vec& result) {
     danToArena(unit.position, dan);
     auto penetration = getUnitRadius(unit) - dan.distance;
     if (penetration > 0) {
-        unit.position += dan.normal * penetration;
-        auto speed = unit.velocity.dot(dan.normal) - getUnitRadiusChangeSpeed(unit);
+        auto& normal = dan.normal;
+        unit.position += normal * penetration;
+        auto speed = unit.velocity.dot(normal) - getUnitRadiusChangeSpeed(unit);
         if (speed < 0) {
-            unit.velocity -= dan.normal * ((1 + getArenaE<Unit>()) * speed);
-            result = dan.normal;
+            unit.velocity -= normal * ((1 + getArenaE<Unit>()) * speed);
+            result = normal;
             return true;
         }
     }
@@ -320,6 +321,13 @@ void update(State& state, int tick, double deltaTime) {
     }
 
     collideWithArena(state.ball, deltaTime, collisionNormal);
+
+    auto ballZ = state.ball.position.z;
+    if (ballZ > ARENA_D / 2 + BALL_RADIUS) {
+        state.goal = 1;
+    } else if (ballZ < -ARENA_D / 2 - BALL_RADIUS) {
+        state.goal = -1;
+    }
 }
 
 void simulate(State& state, int ticks, int microticks, Vis *vis, const function<Move(const State&, const RobotState&, int)>& getMove) {
@@ -351,18 +359,14 @@ void simulate(State& state, int ticks, int microticks, Vis *vis, const function<
                 vis->addAction([pos, radius, color](Vis& v) {
                     v.drawSphere(pos.x, pos.y, pos.z, radius, color);
                 });
-                if (tick < 2) {
-                    vis->addLog(string() + "+" + to_string(tick) + " " + robot.toString());
-                }
+                // if (tick < 2) vis->addLog(string() + "+" + to_string(tick) + " " + robot.toString());
             }
             auto ballPos = state.ball.position;
             auto ballColor = Color::BALL.alpha(0.25 + ((ticks - tick) / 3.0 / ticks));
             vis->addAction([ballPos, ballColor](Vis& v) {
                 v.drawSphere(ballPos.x, ballPos.y, ballPos.z, BALL_RADIUS, ballColor);
             });
-            if (tick < 2) {
-                vis->addLog(string() + "+" + to_string(tick) + " " + state.ball.toString());
-            }
+            // if (tick < 2) vis->addLog(string() + "+" + to_string(tick) + " " + state.ball.toString());
             // vis->addLog(state.findRobotById(getCaptain()).toString());
             // vis->addLog(state.ball.toString());
         }

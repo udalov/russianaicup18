@@ -32,9 +32,10 @@ struct BallState {
 struct State {
     std::vector<RobotState> robots;
     BallState ball;
+    int goal; // 1 if allies scored, -1 if enemies scored, 0 otherwise
 
     State(std::vector<RobotState>&& robots, BallState&& ball) :
-        robots(robots), ball(ball) {}
+        robots(robots), ball(ball), goal(0) {}
 
     const RobotState& findRobotById(int id) const;
 };

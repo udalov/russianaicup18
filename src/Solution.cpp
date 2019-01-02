@@ -6,87 +6,175 @@
 #include <random>
 #include <vector>
 
-// TODO: remove
-#include "QuickStartGuy.h"
-
 using namespace std;
 
 namespace {
     mt19937 rng(42);
 
-    vector<Move> orders(1000 * ORDER_LEN);
+    vector<Move> orders(2000 * ORDER_LEN);
     size_t nextOrderIndex = 0;
 }
 
-struct Order {
-    size_t index;
-
-    Order(size_t index) : index(index) {}
-
-    Move& get(size_t robotIndex, int delta) {
-        return orders[index + robotIndex * TRACK_LEN + delta];
-    }
-
-    Move& operator()(size_t robotIndex, int delta) { return get(robotIndex, delta); }
-    const Move& operator()(size_t robotIndex, int delta) const { return const_cast<Order *>(this)->get(robotIndex, delta); }
-};
-
-void resetOrderPool() {
-    nextOrderIndex = 0;
+Move& Order::get(size_t robotIndex, int delta) {
+    return orders[index + robotIndex * TRACK_LEN + delta];
 }
 
 Order getNextOrder() {
     auto result = Order(nextOrderIndex);
     nextOrderIndex += ORDER_LEN;
+    if (nextOrderIndex >= orders.size()) nextOrderIndex = 0;
     return result;
 }
 
-double score(State state, const Order& order, const Team& team) {
-    QuickStartGuy q;
+Order newEmptyOrder(size_t teamSize) {
+    auto result = getNextOrder();
+    for (size_t j = 0; j < teamSize; j++) {
+        for (size_t i = 0; i < TRACK_LEN; i++) {
+            result(j, i) = Move();
+        }
+    }
+    return result;
+}
 
-    simulate(state, TRACK_LEN, MICROTICKS, nullptr, [&q, &order, &team](const State& state, const RobotState& robot, int delta) {
-        auto index = team.getIndex(robot.id);
-        // TODO (!): somehow pass strategy of the other team
+struct ScoredOrder {
+    double score;
+    Order order;
+
+    ScoredOrder(double score, Order order) : score(score), order(order) {}
+
+    bool operator<(const ScoredOrder& other) const {
+        return score < other.score;
+    }
+};
+
+struct TickData {
+    const Team& team;
+    Scenario& enemyStrategy;
+    int tick;
+
+    TickData(const Team& team, Scenario& enemyStrategy, int tick) : team(team), enemyStrategy(enemyStrategy), tick(tick) {}
+};
+
+double scoreDefense(const RobotState& robot, const State& state) {
+    auto midGoal = Vec(0, 0, -ARENA_D / 2);
+    return -robot.position.distance(midGoal);
+}
+
+double scoreAttack(const RobotState& robot, const State& state) {
+    // return -robot.position.distance(state.ball.position);
+    Vec myPosXZ = Vec(robot.position.x, 0, robot.position.z);
+    Vec ballPosXZ = Vec(state.ball.position.x, 0, state.ball.position.z);
+    return -myPosXZ.distance(ballPosXZ);
+}
+
+double scoreState(const State& state) {
+    const RobotState *robot0 = nullptr;
+    const RobotState *robot1 = nullptr;
+    for (auto& robot : state.robots) {
+        if (isAlly(robot.id)) {
+            robot1 = robot0;
+            robot0 = &robot;
+        }
+    }
+
+    auto score = 0.0;
+
+    score += 10 * state.ball.position.z;
+
+    auto wantedBallVelocity = Vec(0, ARENA_GH/2, ARENA_D) - state.ball.position;
+    wantedBallVelocity *= (MAX_ENTITY_SPEED / 3 / wantedBallVelocity.len());
+    score -= 100 * state.ball.velocity.sqrDist(wantedBallVelocity);
+    score += 100000 * state.goal;
+
+    return score + max(
+        scoreDefense(*robot0, state) + scoreAttack(*robot1, state),
+        scoreDefense(*robot1, state) + scoreAttack(*robot0, state)
+    );
+}
+
+constexpr int SCORE_EACH_NTH = 5;
+
+ScoredOrder scoreOrder(State state, const TickData& data, const Order& order) {
+    double ans = 0;
+
+    simulate(state, TRACK_LEN, MICROTICKS, nullptr, [&data, &order, &ans](const State& state, const RobotState& robot, int delta) {
+        auto index = data.team.getIndex(robot.id);
         if (index == Team::NONE) {
-            // return Move();
-            return q.getMove(state, robot, 0, delta);
+            return data.enemyStrategy.getMove(state, robot, data.tick, delta);
+        }
+
+        if (index == 0 && (TRACK_LEN - 1 - delta) % SCORE_EACH_NTH == 0) {
+            ans += scoreState(state); // * (TRACK_LEN - delta) / TRACK_LEN;
         }
 
         return order(index, delta);
     });
 
-    double ans = 0;
-    for (auto& robot : state.robots) {
-        if (isAlly(robot.id)) ans -= robot.position.distance(state.ball.position);
-    }
-    ans += 10 * state.ball.position.z;
-    ans -= 100 * state.ball.velocity.distance(Vec(0, ARENA_H/2, ARENA_D) - state.ball.position);
-
-    return ans;
+    return ScoredOrder(ans, order);
 }
 
-void compute(const State& state, const Team& team, array<Move, ORDER_LEN>& bestOrder, int tick) {
-    resetOrderPool();
+template<size_t bestOrdersSize>
+void compute(const State& state, const TickData& data, array<Order, bestOrdersSize>& bestOrders) {
+    auto teamSize = data.team.size;
 
-    auto result = getNextOrder();
-    for (size_t j = 0; j < team.size; j++) {
-        size_t shift = TRACK_LEN * j;
-        for (size_t i = 1; i < TRACK_LEN; i++) {
-            result(j, i - 1) = bestOrder[shift + i];
+    vector<ScoredOrder> results; // TODO: pre-allocate
+    for (auto& bestOrder : bestOrders) {
+        for (size_t j = 0; j < teamSize; j++) {
+            for (size_t i = 1; i < TRACK_LEN; i++) {
+                bestOrder(j, i - 1) = bestOrder(j, i);
+            }
         }
-        result(j, TRACK_LEN - 1) = result(j, TRACK_LEN - 2);
+        results.push_back(scoreOrder(state, data, bestOrder));
     }
 
-    uniform_int_distribution<size_t> randomRobotIndex(0, team.size - 1);
+    uniform_int_distribution<size_t> randomRobotIndex(0, teamSize - 1);
     uniform_int_distribution<size_t> randomMoveIndex(0, TRACK_LEN);
     uniform_real_distribution<double> uniformDouble(0, 1);
-    auto bestScore = score(state, result, team);
 
-    for (int iter = 0; iter < 30; iter++) {
+    constexpr auto PERSONAL = 5;
+    vector<vector<ScoredOrder>> personal(teamSize); // TODO: pre-allocate
+    for (size_t j = 0; j < teamSize; j++) {
+        personal[j].reserve(PERSONAL);
+        for (int iter = 0; iter < PERSONAL; iter++) {
+            auto cur = getNextOrder();
+
+            auto angle = uniformDouble(rng) * M_PI * 2;
+            auto x = cos(angle);
+            auto y = 0.0;
+            auto z = sin(angle);
+            auto move = Move(Vec(x * MAX_ENTITY_SPEED, y * MAX_ENTITY_SPEED, z * MAX_ENTITY_SPEED), 0.0);
+
+            for (size_t i = 0; i < TRACK_LEN; i++) cur(j, i) = move;
+            for (size_t k = 0; k < teamSize; k++) if (k != j) {
+                for (size_t i = 0; i < TRACK_LEN; i++) cur(k, i) = Move();
+            }
+
+            auto scored = scoreOrder(state, data, cur);
+            results.push_back(scored);
+            personal[j].push_back(scored);
+        }
+        sort(personal[j].begin(), personal[j].end());
+    }
+
+    {
         auto cur = getNextOrder();
+
+        // TODO: consider also not only the best
+        for (size_t j = 0; j < teamSize; j++) {
+            for (size_t i = 0; i < TRACK_LEN; i++) cur(j, i) = personal[j].back().order(j, i);
+        }
+
+        results.push_back(scoreOrder(state, data, cur));
+    }
+
+    make_heap(results.begin(), results.end());
+
+    for (int iter = 0; iter < 20; iter++) {
+        auto cur = getNextOrder();
+
         auto r = randomRobotIndex(rng);
         auto left = randomMoveIndex(rng);
-        auto right = randomMoveIndex(rng);
+        auto right = TRACK_LEN; // randomMoveIndex(rng);
         if (left > right) swap(left, right);
 
         auto angle = uniformDouble(rng) * M_PI * 2;
@@ -95,42 +183,57 @@ void compute(const State& state, const Team& team, array<Move, ORDER_LEN>& bestO
         auto z = sin(angle);
         auto move = Move(Vec(x * MAX_ENTITY_SPEED, y * MAX_ENTITY_SPEED, z * MAX_ENTITY_SPEED), iter % 10 == 0 ? ROBOT_MAX_JUMP_SPEED : 0.0);
 
-        for (size_t j = 0; j < team.size; j++) {
+        for (size_t j = 0; j < teamSize; j++) {
             for (size_t i = 0; i < TRACK_LEN; i++) {
-                cur(j, i) = result(j, i);
+                cur(j, i) = results.front().order(j, i);
             }
         }
 
         for (size_t i = left; i < right; i++) cur(r, i) = move;
 
-        auto curScore = score(state, cur, team);
-        if (curScore > bestScore) {
-            bestScore = curScore;
-            result = cur;
-        }
+        results.push_back(scoreOrder(state, data, cur));
+        push_heap(results.begin(), results.end());
     }
 
-    for (size_t j = 0; j < team.size; j++) {
-        size_t shift = TRACK_LEN * j;
-        for (size_t i = 0; i < TRACK_LEN; i++) {
-            bestOrder[shift + i] = result(j, i);
-        }
+    sort(results.rbegin(), results.rend());
+
+    for (size_t i = 0; i < bestOrders.size(); i++) {
+        auto& scored = i < results.size() ? results[i] : results.back();
+        bestOrders[i] = scored.order;
     }
 }
 
-Solution::Solution(const Team& team) :
-    team(team) {}
+Solution::Solution(const Team& team, Scenario& enemyStrategy) : team(team), enemyStrategy(enemyStrategy) {
+    auto order = newEmptyOrder(team.size);
+    for (auto& bestOrder : bestOrders) {
+        bestOrder = order;
+    }
+}
 
 Move Solution::getMove(const State& state, const RobotState& me, int tick, int delta) {
     auto id = me.id;
     assert(isAlly(id)); // Otherwise support z-axis inversion
 
-    if (tick != lastTick) {
+    if (tick != previousTick) {
         assert(delta == 0);
-        compute(state, team, bestOrder, tick);
-        lastTick = tick;
+        previousTick = tick;
+
+        if (tick == lastTickWithGoal) {
+            auto order = newEmptyOrder(team.size);
+            for (auto& bestOrder : bestOrders) {
+                bestOrder = order;
+            }
+        } else if (tick >= lastTickWithGoal + RESET_TICKS - 1) {
+            compute(state, TickData(team, enemyStrategy, tick), bestOrders);
+        }
     }
 
-    auto index = team.getIndex(id) * TRACK_LEN + delta;
-    return index < bestOrder.size() ? bestOrder[index] : Move();
+    return static_cast<size_t>(delta) < TRACK_LEN ? bestOrders[0](team.getIndex(id), delta) : Move();
+}
+
+void Solution::checkScore(int tick, const pair<int, int>& score) {
+    if (score == scoreOnPreviousTick) return;
+
+    scoreOnPreviousTick = score;
+    lastTickWithGoal = tick;
 }

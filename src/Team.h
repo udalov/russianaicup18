@@ -7,11 +7,12 @@ struct Team {
     int id0;
     int id1;
     int id2;
+    int playerId;
     size_t size;
     bool allies;
 
-    Team(int id0, int id1, int id2, bool allies) :
-        id0(id0), id1(id1), id2(id2), size(id2 == -1 ? 2 : 3), allies(allies) {}
+    Team(int id0, int id1, int id2, int playerId, bool allies) :
+        id0(id0), id1(id1), id2(id2), playerId(playerId), size(id2 == -1 ? 2 : 3), allies(allies) {}
 
     size_t getIndex(int id) const;
     int getId(size_t index) const;

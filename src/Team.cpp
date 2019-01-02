@@ -47,20 +47,24 @@ string Team::toString() const {
 void initializeTeams(const Game& game) {
     vector<int> allyIds;
     vector<int> enemyIds;
+    int allyPlayerId = -1;
+    int enemyPlayerId = -1;
     for (auto& robot : game.robots) {
         auto id = robot.id;
         if (robot.is_teammate) {
             allyIds.push_back(id);
+            allyPlayerId = robot.player_id;
         } else {
             enemyIds.push_back(id);
+            enemyPlayerId = robot.player_id;
         }
     }
 
     sort(allyIds.begin(), allyIds.end());
     sort(enemyIds.begin(), enemyIds.end());
 
-    allies = new Team(allyIds.at(0), allyIds.at(1), allyIds.size() == 3 ? allyIds.at(2) : -1, true);
-    enemies = new Team(enemyIds.at(0), enemyIds.at(1), enemyIds.size() == 3 ? enemyIds.at(2) : -1, false);
+    allies = new Team(allyIds.at(0), allyIds.at(1), allyIds.size() == 3 ? allyIds.at(2) : -1, allyPlayerId, true);
+    enemies = new Team(enemyIds.at(0), enemyIds.at(1), enemyIds.size() == 3 ? enemyIds.at(2) : -1, enemyPlayerId, false);
 }
 
 const Team& getAllies() {

@@ -19,8 +19,8 @@ enum class Opponent {
 const Opponent OPPONENT = Opponent::ME_OLD;
 const bool VIS = false;
 const bool DEBUG = true;
-const int SEED = 424247;
-const int DURATION = 1500;
+const int SEED = 424251;
+const int DURATION = 5000;
 
 const string HOME = "/Users/udalov/c/russianaicup18/";
 

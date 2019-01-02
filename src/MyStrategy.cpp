@@ -19,6 +19,7 @@ using namespace model;
 using namespace std;
 
 #define VIS 1
+#define LOG 0
 #define MEASURE_SIMULATION_SPEED 0
 
 MyStrategy::MyStrategy() { }
@@ -27,6 +28,7 @@ namespace {
     unique_ptr<Vis> vis = nullptr;
     unordered_map<int, Move> answers;
     unordered_map<int, Scenario *> scenario;
+    unique_ptr<Solution> solution;
     QuickStartGuy quickStart;
 }
 
@@ -49,17 +51,30 @@ BallState createBall(const Ball& ball) {
     return BallState(Vec(ball.x, ball.y, ball.z), Vec(ball.velocity_x, ball.velocity_y, ball.velocity_z));
 }
 
-void solve(State&& state, int solverId, int currentTick, bool debug) {
+pair<int, int> getScore(const Game& game) {
+    int allies = 0;
+    int enemies = 0;
+    for (auto& player : game.players) {
+        if (player.id == getAllies().playerId) allies = player.score;
+        else enemies = player.score;
+    }
+    return make_pair(allies, enemies);
+}
+
+void solve(State&& state, const pair<int, int>& score, int currentTick, bool debug) {
     if (currentTick == 0) {
-        auto solution = new Solution(getAllies());
+        auto& enemyStrategy = quickStart;
+        solution = make_unique<Solution>(getAllies(), enemyStrategy);
         for (auto& robot : state.robots) {
             if (isAlly(robot.id)) {
-                scenario[robot.id] = solution;
+                scenario[robot.id] = solution.get();
             } else {
-                scenario[robot.id] = &quickStart;
+                scenario[robot.id] = &enemyStrategy;
             }
         }
     }
+
+    solution->checkScore(currentTick, score);
 
     auto keyBase = currentTick << 4;
     for (auto& robot : state.robots) {
@@ -77,7 +92,7 @@ void solve(State&& state, int solverId, int currentTick, bool debug) {
             return scenario[robot.id]->getMove(state, robot, currentTick, delta);
         };
 
-        if (VIS) {
+        if (VIS && LOG) {
             vis->addLog(state.findRobotById(getCaptain()).toString());
             vis->addLog(state.ball.toString());
             vis->addLog(answers[keyBase + getCaptain()].toString());
@@ -107,7 +122,7 @@ void solve(State&& state, int solverId, int currentTick, bool debug) {
             throw string() + "OK";
         }
 
-        simulate(state, 50, MICROTICKS, VIS ? vis.get() : nullptr, getMove);
+        simulate(state, TRACK_LEN, MICROTICKS, VIS ? vis.get() : nullptr, getMove);
     }
 }
 
@@ -117,7 +132,7 @@ Move solve(const Game& game, int myId, bool debug) {
     auto answer = answers.find(key);
     if (answer != answers.end()) return answer->second;
 
-    solve(State(createRobots(game.robots), createBall(game.ball)), myId, tick, debug);
+    solve(State(createRobots(game.robots), createBall(game.ball)), getScore(game), tick, debug);
 
     return answers[key];
 }
