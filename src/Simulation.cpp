@@ -217,8 +217,10 @@ void updateRobot(RobotState& robot, double deltaTime, const Move& move) {
         auto len = tv.len();
         if (len > 0) {
             auto acceleration = ROBOT_ACCELERATION * max(0.0, robot.touchNormal.y);
-            tv *= (acceleration * deltaTime / len);
-            tv.clamp(len);
+            auto coeff = acceleration * deltaTime / len;
+            if (coeff < 1) {
+                tv *= coeff;
+            }
             robot.velocity += tv;
         }
     }

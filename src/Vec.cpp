@@ -5,11 +5,13 @@
 using namespace std;
 
 void Vec::clamp(double length) {
-    auto len = this->len();
-    if (len > length) {
-        x *= length / len;
-        y *= length / len;
-        z *= length / len;
+    if (abs(x) + abs(y) + abs(z) > length) {
+        auto len = this->len();
+        if (len > length) {
+            x *= length / len;
+            y *= length / len;
+            z *= length / len;
+        }
     }
 }
 
