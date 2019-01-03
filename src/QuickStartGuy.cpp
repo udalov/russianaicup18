@@ -7,6 +7,10 @@
 using namespace std;
 
 Move QuickStartGuy::getMove(const State& state, const RobotState& me, int tick, int delta) {
+    if (lastGoalTick <= tick && tick <= lastGoalTick + RESET_TICKS - 2) {
+        return Move();
+    }
+
     if (!me.touch) {
         // TODO: use nitro
         return Move(Vec(0, -MAX_ENTITY_SPEED, 0), false);

@@ -28,7 +28,6 @@ namespace {
     unique_ptr<Vis> vis = nullptr;
     unordered_map<int, Move> answers;
     unordered_map<int, Scenario *> scenario;
-    unique_ptr<Solution> solution;
     QuickStartGuy quickStart;
 }
 
@@ -61,20 +60,27 @@ pair<int, int> getScore(const Game& game) {
     return make_pair(allies, enemies);
 }
 
+pair<int, int> previousScore = { 0, 0 };
+
 void solve(State&& state, const pair<int, int>& score, int currentTick, bool debug) {
     if (currentTick == 0) {
         auto& enemyStrategy = quickStart;
-        solution = make_unique<Solution>(getAllies(), enemyStrategy);
+        auto solution = new Solution(getAllies(), enemyStrategy);
         for (auto& robot : state.robots) {
             if (isAlly(robot.id)) {
-                scenario[robot.id] = solution.get();
+                scenario[robot.id] = solution;
             } else {
                 scenario[robot.id] = &enemyStrategy;
             }
         }
     }
 
-    solution->checkScore(currentTick, score);
+    if (score != previousScore) {
+        previousScore = score;
+        for (auto& robot : state.robots) {
+            scenario[robot.id]->goalScored(currentTick);
+        }
+    }
 
     auto keyBase = currentTick << 4;
     for (auto& robot : state.robots) {

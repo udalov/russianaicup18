@@ -26,16 +26,12 @@ class Solution : public Scenario {
         const Team& team;
         Scenario& enemyStrategy;
 
-        std::pair<int, int> scoreOnPreviousTick = std::make_pair(0, 0);
-        int lastTickWithGoal = -31337;
         int previousTick = -1;
         std::array<Order, BEST_ORDERS_CACHE_SIZE> bestOrders;
     public:
         Solution(const Team& team, Scenario& enemyStrategy);
 
         Move getMove(const State& state, const RobotState& me, int tick, int delta) override;
-
-        void checkScore(int tick, const std::pair<int, int>& score);
 
         ~Solution() {}
 };

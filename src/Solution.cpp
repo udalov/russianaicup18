@@ -218,22 +218,15 @@ Move Solution::getMove(const State& state, const RobotState& me, int tick, int d
         assert(delta == 0);
         previousTick = tick;
 
-        if (tick == lastTickWithGoal) {
+        if (tick == lastGoalTick) {
             auto order = newEmptyOrder(team.size);
             for (auto& bestOrder : bestOrders) {
                 bestOrder = order;
             }
-        } else if (tick >= lastTickWithGoal + RESET_TICKS - 1) {
+        } else if (tick >= lastGoalTick + RESET_TICKS - 1) {
             compute(state, TickData(team, enemyStrategy, tick), bestOrders);
         }
     }
 
     return static_cast<size_t>(delta) < TRACK_LEN ? bestOrders[0](team.getIndex(id), delta) : Move();
-}
-
-void Solution::checkScore(int tick, const pair<int, int>& score) {
-    if (score == scoreOnPreviousTick) return;
-
-    scoreOnPreviousTick = score;
-    lastTickWithGoal = tick;
 }
