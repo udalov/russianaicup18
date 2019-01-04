@@ -10,9 +10,9 @@ using namespace std;
 namespace {
     const Team *allies = nullptr;
     const Team *enemies = nullptr;
+    int allyBits;
+    int enemyBits;
 }
-
-size_t Team::NONE = static_cast<size_t>(-1);
 
 size_t Team::getIndex(int id) const {
     if (id == id0) return 0;
@@ -49,14 +49,18 @@ void initializeTeams(const Game& game) {
     vector<int> enemyIds;
     int allyPlayerId = -1;
     int enemyPlayerId = -1;
+    allyBits = 0;
+    enemyBits = 0;
     for (auto& robot : game.robots) {
         auto id = robot.id;
         if (robot.is_teammate) {
             allyIds.push_back(id);
             allyPlayerId = robot.player_id;
+            allyBits |= (1 << id);
         } else {
             enemyIds.push_back(id);
             enemyPlayerId = robot.player_id;
+            enemyBits |= (1 << id);
         }
     }
 
@@ -80,7 +84,7 @@ const Team& getTeam(int id) {
 }
 
 bool isAlly(int id) {
-    return allies->has(id);
+    return allyBits & (1 << id);
 }
 
 int getCaptain() {

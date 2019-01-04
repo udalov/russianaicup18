@@ -22,6 +22,8 @@ const bool DEBUG = true;
 const int SEED = 424251;
 const int DURATION = 5000;
 
+const bool DISABLE_RANDOM = false;
+
 const string HOME = "/Users/udalov/c/russianaicup18/";
 
 template<typename... Args> pid_t runProcess(const string& path, Args... vararg) {
@@ -78,6 +80,10 @@ int main(/* int argc, char* argv[] */) {
 
     if (SEED != -1) {
         args.insert(args.end(), { "--seed", to_string(SEED) });
+    }
+
+    if (DISABLE_RANDOM) {
+        args.push_back("--disable-random");
     }
 
     if (OPPONENT == Opponent::EMPTY) {

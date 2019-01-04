@@ -1,12 +1,22 @@
 #include "QuickStartGuy.h"
 
 #include "Const.h"
+#include "Solution.h"
 #include "Team.h"
 #include <iostream>
 
 using namespace std;
 
-Move QuickStartGuy::getMove(const State& state, const RobotState& me, int tick, int delta) {
+namespace {
+    constexpr auto radiusSumSqr = sqr(BALL_RADIUS + ROBOT_MAX_RADIUS);
+    constexpr auto goalieTargetPos = Vec(0, 0, -ARENA_D / 2 + ARENA_BR);
+}
+
+template class QuickStartGuy<false>;
+template class QuickStartGuy<true>;
+
+template<bool isMe>
+Move QuickStartGuy<isMe>::getMove(const State& state, const RobotState& me, int tick, int delta) {
     if (lastGoalTick <= tick && tick <= lastGoalTick + RESET_TICKS - 2) {
         return Move();
     }
@@ -16,14 +26,14 @@ Move QuickStartGuy::getMove(const State& state, const RobotState& me, int tick, 
         return Move(Vec(0, -MAX_ENTITY_SPEED, 0), false);
     }
 
-    auto isMe = isAlly(me.id);
-    auto inv = isMe ? 1.0 : -1.0;
+    constexpr auto inv = isMe ? 1.0 : -1.0;
+    constexpr auto iterations = isMe ? 100 : ((TRACK_LEN + 5) / 6);
 
     auto ball = state.ball.position;
     auto ballV = state.ball.velocity;
     auto pos = me.position;
 
-    auto jump = ball.sqrDist(pos) < sqr(BALL_RADIUS + ROBOT_MAX_RADIUS) && pos.z*inv < ball.z*inv;
+    auto jump = ball.sqrDist(pos) < radiusSumSqr && pos.z*inv < ball.z*inv;
 
     /*
     auto DEBUG = me.id == 3 && tick == 100 && delta == 0;
@@ -38,13 +48,13 @@ Move QuickStartGuy::getMove(const State& state, const RobotState& me, int tick, 
         // which happens in the --disable-random mode
         isAttacker = true;
         for (auto& robot : state.robots) {
-            if (robot.id != me.id && isAlly(robot.id) == isAlly(me.id) && robot.position.z*inv < pos.z*inv) {
+            if (robot.id != me.id && isAlly(robot.id) == isMe && robot.position.z*inv < pos.z*inv) {
                 isAttacker = false;
             }
         }
     } else {
         for (auto& robot : state.robots) {
-            if (robot.id != me.id && isAlly(robot.id) == isAlly(me.id) && robot.position.z*inv < pos.z*inv) {
+            if (robot.id != me.id && isAlly(robot.id) == isMe && robot.position.z*inv < pos.z*inv) {
                 isAttacker = true;
             }
         }
@@ -53,7 +63,7 @@ Move QuickStartGuy::getMove(const State& state, const RobotState& me, int tick, 
     if (isAttacker) {
         auto increment = ballV * 0.1;
         auto ballPos = ball;
-        for (int i = 1; i <= 100; i++) {
+        for (size_t i = 1; i <= iterations; i++) {
             ballPos += increment;
 
             if (ballPos.z*inv > pos.z*inv && abs(ballPos.x) < ARENA_W / 2 && abs(ballPos.z) < ARENA_D / 2) {
@@ -68,16 +78,17 @@ Move QuickStartGuy::getMove(const State& state, const RobotState& me, int tick, 
         }
     }
 
-    auto targetPos = Vec(0, 0, -ARENA_D / 2 + ARENA_BR);
     if (ballV.z*inv < -1e-5) {
-        auto t = (targetPos.z*inv - ball.z) / ballV.z;
+        auto t = (goalieTargetPos.z*inv - ball.z) / ballV.z;
         auto x = ball.x + ballV.x * t;
         if (abs(x) < ARENA_GW / 2) {
-            targetPos.x = x;
+            auto targetVelocity = Vec(x - pos.x, 0, goalieTargetPos.z*inv - pos.z);
+            targetVelocity *= ROBOT_MAX_GROUND_SPEED;
+            return Move(targetVelocity, jump ? ROBOT_MAX_JUMP_SPEED : 0);
         }
     }
 
-    auto targetVelocity = Vec(targetPos.x - pos.x, 0, targetPos.z*inv - pos.z);
+    auto targetVelocity = Vec(goalieTargetPos.x - pos.x, 0, goalieTargetPos.z*inv - pos.z);
     targetVelocity *= ROBOT_MAX_GROUND_SPEED;
     return Move(targetVelocity, jump ? ROBOT_MAX_JUMP_SPEED : 0);
 }

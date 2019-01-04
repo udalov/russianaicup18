@@ -21,7 +21,7 @@ struct Team {
 
     std::string toString() const;
 
-    static size_t NONE;
+    constexpr static auto NONE = static_cast<size_t>(-1);
 };
 
 void initializeTeams(const model::Game& game);
