@@ -18,7 +18,7 @@
 using namespace model;
 using namespace std;
 
-#define VIS 1
+#define VIS 0
 #define LOG 0
 #define MEASURE_SIMULATION_SPEED 0
 

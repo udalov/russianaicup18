@@ -35,13 +35,6 @@ Move QuickStartGuy<isMe>::getMove(const State& state, const RobotState& me, int 
 
     auto jump = ball.sqrDist(pos) < radiusSumSqr && pos.z*inv < ball.z*inv;
 
-    /*
-    auto DEBUG = me.id == 3 && tick == 100 && delta == 0;
-    if (DEBUG) {
-        cout << me.toString() << " ball.distance(pos)=" << ball.distance(pos) << " pos.z=" << pos.z << " ball.z=" << ball.z << endl;
-    }
-    */
-
     auto isAttacker = false;
     if (isMe) {
         // Not the quick start behavior: avoid defending when both bots are at the same distance to the goal,
