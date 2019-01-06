@@ -152,7 +152,7 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
 
     if (debug) {
         if (me.id == getCaptain()) {
-            if (currentTick % 100 == 0) cout << "tick " << currentTick << endl;
+            if (currentTick % 1000 == 0) cout << "tick " << currentTick << endl;
         }
 
         if (VIS && vis == nullptr) {

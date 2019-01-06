@@ -56,14 +56,15 @@ struct TickData {
 };
 
 double scoreDefense(const RobotState& robot, const State& state) {
-    auto midGoal = Vec(0, 0, -ARENA_D / 2);
-    return -robot.position.distance(midGoal);
+    // auto target = Vec(state.ball.position.x / 3, 0, -ARENA_D / 2 - BALL_RADIUS);
+    auto target = Vec(0, 0, -ARENA_D / 2);
+    return -robot.position.distance(target) - sqr(sqr(robot.position.y));
 }
 
 double scoreAttack(const RobotState& robot, const State& state) {
     // return -robot.position.distance(state.ball.position);
     Vec myPosXZ = Vec(robot.position.x, 0, robot.position.z);
-    Vec ballPosXZ = Vec(state.ball.position.x, 0, state.ball.position.z);
+    Vec ballPosXZ = Vec(state.ball.position.x, 0, state.ball.position.z - BALL_RADIUS - robot.radius);
     return -myPosXZ.distance(ballPosXZ);
 }
 
@@ -76,14 +77,15 @@ double scoreState(const State& state) {
             robot0 = &robot;
         }
     }
+    auto& ball = state.ball;
 
     auto score = 0.0;
 
-    score += 10 * state.ball.position.z;
+    score += 10 * ball.position.z;
 
-    auto wantedBallVelocity = Vec(0, ARENA_GH/2, ARENA_D) - state.ball.position;
+    auto wantedBallVelocity = Vec(0, ARENA_GH/2, ARENA_D) - ball.position;
     wantedBallVelocity *= (MAX_ENTITY_SPEED / 3 / wantedBallVelocity.len());
-    score -= 100 * state.ball.velocity.sqrDist(wantedBallVelocity);
+    score -= 100 * ball.velocity.sqrDist(wantedBallVelocity);
     score += 100000 * state.goal;
 
     return score + max(
@@ -95,7 +97,7 @@ double scoreState(const State& state) {
 constexpr int SCORE_EACH_NTH = 5;
 
 ScoredOrder scoreOrder(State state, const TickData& data, const Order& order) {
-    double ans = 0;
+    auto ans = 0.0;
 
     simulate(state, TRACK_LEN, MICROTICKS, nullptr, [&data, &order, &ans](const State& state, const RobotState& robot, int delta) {
         auto index = data.team.getIndex(robot.id);
