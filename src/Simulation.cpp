@@ -14,9 +14,6 @@ struct Dan {
 
     Dan() :
         distance(1e100), normal() {}
-
-    Dan(double distance, const Vec& normal) :
-        distance(distance), normal(normal) {}
 };
 
 void danToPlane(const Vec& point, Vec&& pointOnPlane, Vec&& planeNormal, Dan& result) {
@@ -294,7 +291,7 @@ void collideEntities(RobotState& a, Unit& b) {
 }
 
 template<typename Unit>
-bool collideWithArena(Unit& unit, double deltaTime, Vec& result) {
+bool collideWithArena(Unit& unit, Vec& result) {
     Dan dan;
     danToArena(unit.position, dan);
     auto penetration = getUnitRadius(unit) - dan.distance;
@@ -315,7 +312,7 @@ namespace {
     array<Move, 10> moves;
 }
 
-void update(State& state, int tick, double deltaTime) {
+void update(State& state, double deltaTime) {
     auto& robots = state.robots;
 
     for (size_t i = 0; i < robots.size(); i++) {
@@ -333,7 +330,7 @@ void update(State& state, int tick, double deltaTime) {
     Vec collisionNormal;
     for (auto& robot : robots) {
         collideEntities(robot, state.ball);
-        if (collideWithArena(robot, deltaTime, collisionNormal)) {
+        if (collideWithArena(robot, collisionNormal)) {
             robot.touch = true;
             robot.touchNormal = collisionNormal;
         } else {
@@ -341,7 +338,7 @@ void update(State& state, int tick, double deltaTime) {
         }
     }
 
-    collideWithArena(state.ball, deltaTime, collisionNormal);
+    collideWithArena(state.ball, collisionNormal);
 
     auto ballZ = state.ball.position.z;
     if (ballZ > ARENA_D / 2 + BALL_RADIUS) {
@@ -353,7 +350,7 @@ void update(State& state, int tick, double deltaTime) {
     // TODO: update nitro packs
 }
 
-void simulate(State& state, int ticks, int microticks, Vis *vis, const function<Move(const State&, const RobotState&, int)>& getMove) {
+void simulate(State& state, int ticks, int microticks, Vis *vis, const function<Move(const State&, const RobotState&, size_t)>& getMove) {
     auto deltaTime = 1.0 / TICKS_PER_SECOND / microticks;
 
     for (int tick = 0; tick < ticks; tick++) {
@@ -369,8 +366,8 @@ void simulate(State& state, int ticks, int microticks, Vis *vis, const function<
         }
         */
 
-        for (int _ = 1; _ <= microticks; _++) {
-            update(state, tick, deltaTime);
+        for (int _ = microticks; _ > 0; _--) {
+            update(state, deltaTime);
         }
 
         if (vis != nullptr) {

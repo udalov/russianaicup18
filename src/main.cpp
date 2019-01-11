@@ -38,13 +38,13 @@ template<typename... Args> pid_t runProcess(const string& path, Args... vararg) 
     if (pid != 0) return pid;
 
     auto args = vector<string> { vararg... };
-    const char **cargs = new const char*[args.size() + 2];
+    const char **cargs = new const char *[args.size() + 2];
     int i = 0;
     cargs[i++] = path.c_str();
     for (auto& arg : args) {
         cargs[i++] = arg.c_str();
     }
-    cargs[i++] = NULL;
+    cargs[i] = nullptr;
 
     execv(path.c_str(), const_cast<char *const *>(cargs));
 
@@ -80,7 +80,7 @@ int main(/* int argc, char* argv[] */) {
     };
 
     if (!VIS) {
-        args.push_back("--noshow");
+        args.emplace_back("--noshow");
     }
     if (SEED != -1) {
         args.insert(args.end(), { "--seed", to_string(SEED) });
@@ -89,7 +89,7 @@ int main(/* int argc, char* argv[] */) {
         args.insert(args.end(), { "--nitro", "true" });
     }
     if (DISABLE_RANDOM) {
-        args.push_back("--disable-random");
+        args.emplace_back("--disable-random");
     }
     if (OPPONENT == Opponent::EMPTY) {
         args.insert(args.end(), { "--p2", "empty", "--p2-name", "Empty" });

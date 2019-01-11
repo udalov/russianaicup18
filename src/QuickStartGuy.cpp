@@ -16,7 +16,7 @@ template class QuickStartGuy<false>;
 template class QuickStartGuy<true>;
 
 template<bool isMe>
-Move QuickStartGuy<isMe>::getMove(const State& state, const RobotState& me, int tick, int delta) {
+Move QuickStartGuy<isMe>::getMove(const State& state, const RobotState& me, int tick, size_t) {
     if (lastGoalTick <= tick && tick <= lastGoalTick + RESET_TICKS - 2) {
         return Move();
     }

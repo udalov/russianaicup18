@@ -14,12 +14,12 @@ struct Order {
     size_t index;
 
     Order() : index(static_cast<size_t>(-1)) {}
-    Order(size_t index) : index(index) {}
+    explicit Order(size_t index) : index(index) {}
 
-    Move& get(size_t robotIndex, int delta);
+    Move& get(size_t robotIndex, size_t delta);
 
-    Move& operator()(size_t robotIndex, int delta) { return get(robotIndex, delta); }
-    const Move& operator()(size_t robotIndex, int delta) const { return const_cast<Order *>(this)->get(robotIndex, delta); }
+    Move& operator()(size_t robotIndex, size_t delta) { return get(robotIndex, delta); }
+    const Move& operator()(size_t robotIndex, size_t delta) const { return const_cast<Order *>(this)->get(robotIndex, delta); }
 };
 
 class Solution : public Scenario {
@@ -32,7 +32,7 @@ class Solution : public Scenario {
     public:
         Solution(const Team& team, Scenario& enemyStrategy);
 
-        Move getMove(const State& state, const RobotState& me, int tick, int delta) override;
+        Move getMove(const State& state, const RobotState& me, int tick, size_t delta) override;
 
-        ~Solution() {}
+        ~Solution() override = default;
 };

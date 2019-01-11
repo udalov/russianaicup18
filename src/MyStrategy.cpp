@@ -22,7 +22,7 @@ using namespace std;
 #define LOG 0
 #define MEASURE_SIMULATION_SPEED 0
 
-MyStrategy::MyStrategy() { }
+MyStrategy::MyStrategy() = default;
 
 namespace {
     unique_ptr<Vis> vis = nullptr;
@@ -89,7 +89,7 @@ void solve(State&& state, const pair<int, int>& score, int currentTick, bool deb
     }
 
     if (debug) {
-        auto getMove = [currentTick, keyBase](const State& state, const RobotState& robot, int delta) {
+        auto getMove = [currentTick, keyBase](const State& state, const RobotState& robot, size_t delta) {
             if (delta == 0 && isAlly(robot.id)) {
                 return answers[keyBase + robot.id];
             }

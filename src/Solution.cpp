@@ -23,7 +23,7 @@ namespace {
     uniform_real_distribution<double> uniformDouble(0, 1);
 }
 
-Move& Order::get(size_t robotIndex, int delta) {
+Move& Order::get(size_t robotIndex, size_t delta) {
     return orders[index + robotIndex * TRACK_LEN + delta];
 }
 
@@ -105,7 +105,7 @@ double scoreState(const State& state) {
 ScoredOrder scoreOrder(State state, const TickData& data, const Order& order) {
     auto ans = 0.0;
 
-    simulate(state, TRACK_LEN, MICROTICKS, nullptr, [&data, &order, &ans](const State& state, const RobotState& robot, int delta) {
+    simulate(state, TRACK_LEN, MICROTICKS, nullptr, [&data, &order, &ans](const State& state, const RobotState& robot, size_t delta) {
         auto index = data.team.getIndex(robot.id);
         if (index == Team::NONE) {
             return data.enemyStrategy.getMove(state, robot, data.tick, delta);
@@ -212,7 +212,7 @@ Solution::Solution(const Team& team, Scenario& enemyStrategy) : team(team), enem
     }
 }
 
-Move Solution::getMove(const State& state, const RobotState& me, int tick, int delta) {
+Move Solution::getMove(const State& state, const RobotState& me, int tick, size_t delta) {
     auto id = me.id;
     assert(isAlly(id)); // Otherwise support z-axis inversion
 
