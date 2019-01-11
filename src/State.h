@@ -10,11 +10,12 @@ struct RobotState {
     Vec velocity;
     double radius;
     double radiusChangeSpeed;
+    double nitro;
     Vec touchNormal;
     bool touch;
 
-    RobotState(int id, const Vec& position, const Vec& velocity, double radius, const Vec& touchNormal, bool touch) :
-        id(id), position(position), velocity(velocity), radius(radius), radiusChangeSpeed(), touchNormal(touchNormal), touch(touch) {}
+    RobotState(int id, const Vec& position, const Vec& velocity, double radius, double nitro, const Vec& touchNormal, bool touch) :
+        id(id), position(position), velocity(velocity), radius(radius), radiusChangeSpeed(), nitro(nitro), touchNormal(touchNormal), touch(touch) {}
 
     std::string toString() const;
 };

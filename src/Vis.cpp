@@ -12,6 +12,8 @@ Color Color::ALLY = Color(150, 150, 255);
 Color Color::ENEMY = Color(255, 150, 150);
 Color Color::BALL = Color(40, 255, 40);
 Color Color::WHITE = Color(255, 255, 255);
+Color Color::ALIVE_NITRO = Color(200, 200, 100);
+Color Color::DEAD_NITRO = Color(50, 50, 25);
 
 Vis::Vis() :
     vis("/Users/udalov/c/russianaicup18/out/log.txt"),
@@ -131,6 +133,10 @@ void Vis::drawGame(const Robot& me, const Game& game) {
         for (auto& robot : game.robots) if (robot.is_teammate == isTeammate) {
             drawSphere(robot.x, robot.y, robot.z, robot.radius, isTeammate ? Color::ALLY : Color::ENEMY);
         }
+    }
+
+    for (auto& nitro : game.nitro_packs) {
+        drawSphere(nitro.x, nitro.y, nitro.z, nitro.radius, nitro.alive ? Color::ALIVE_NITRO : Color::DEAD_NITRO);
     }
 
     drawSphere(me.x, me.y, me.z, me.radius, Color::ME);

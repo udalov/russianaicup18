@@ -24,6 +24,8 @@ struct Color {
     static Color ENEMY;
     static Color BALL;
     static Color WHITE;
+    static Color ALIVE_NITRO;
+    static Color DEAD_NITRO;
 };
 
 class Vis {

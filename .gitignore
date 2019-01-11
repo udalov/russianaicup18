@@ -1,4 +1,6 @@
 /local-runner
+/repeater
+/.cache
 out
 .gradle
 .idea

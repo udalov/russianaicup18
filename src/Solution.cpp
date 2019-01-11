@@ -125,7 +125,7 @@ Move generateRandomMove() {
     auto angle = uniformDouble(rng) * M_PI * 2;
     auto x = cos(angle);
     auto z = sin(angle);
-    return Move(Vec(x * MAX_ENTITY_SPEED, 0.0, z * MAX_ENTITY_SPEED), 0.0);
+    return Move(Vec(x * MAX_ENTITY_SPEED, 0.0, z * MAX_ENTITY_SPEED), 0.0, false);
 }
 
 template<size_t bestOrdersSize>

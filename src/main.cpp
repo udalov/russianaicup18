@@ -20,7 +20,9 @@ const Opponent OPPONENT = Opponent::ME_OLD;
 const bool VIS = false;
 const bool DEBUG = true;
 const int SEED = 424242;
-const int DURATION = 5000;
+const size_t DURATION = 5000;
+const size_t TEAM_SIZE = 2;
+const bool NITRO = true;
 
 const bool DISABLE_RANDOM = false;
 
@@ -71,21 +73,24 @@ int main(/* int argc, char* argv[] */) {
     vector<string> args = {
         "--duration", to_string(DURATION),
         "--results-file", resultsFile,
-        "--p1-name", "Me"
+        "--team-size", to_string(TEAM_SIZE),
+        "--p1-name", "Me",
+        "--vsync",
+        "--no-countdown"
     };
 
     if (!VIS) {
         args.push_back("--noshow");
     }
-
     if (SEED != -1) {
         args.insert(args.end(), { "--seed", to_string(SEED) });
     }
-
+    if (NITRO) {
+        args.insert(args.end(), { "--nitro", "true" });
+    }
     if (DISABLE_RANDOM) {
         args.push_back("--disable-random");
     }
-
     if (OPPONENT == Opponent::EMPTY) {
         args.insert(args.end(), { "--p2", "empty", "--p2-name", "Empty" });
     } else if (OPPONENT == Opponent::QSG) {

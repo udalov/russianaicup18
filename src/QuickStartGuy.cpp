@@ -22,8 +22,7 @@ Move QuickStartGuy<isMe>::getMove(const State& state, const RobotState& me, int 
     }
 
     if (!me.touch) {
-        // TODO: use nitro
-        return Move(Vec(0, -MAX_ENTITY_SPEED, 0), false);
+        return Move(Vec(0, -MAX_ENTITY_SPEED, 0), 0.0, true);
     }
 
     constexpr auto inv = isMe ? 1.0 : -1.0;
@@ -65,7 +64,7 @@ Move QuickStartGuy<isMe>::getMove(const State& state, const RobotState& me, int 
                 auto needSpeed = deltaPosDist * 10.0 / i;
                 if (0.5 * ROBOT_MAX_GROUND_SPEED < needSpeed && needSpeed < ROBOT_MAX_GROUND_SPEED) {
                     auto targetVelocity = deltaPos * (10.0 / i);
-                    return Move(targetVelocity, jump ? ROBOT_MAX_JUMP_SPEED : 0);
+                    return Move(targetVelocity, jump ? ROBOT_MAX_JUMP_SPEED : 0, false);
                 }
             }
         }
@@ -77,11 +76,11 @@ Move QuickStartGuy<isMe>::getMove(const State& state, const RobotState& me, int 
         if (abs(x) < ARENA_GW / 2) {
             auto targetVelocity = Vec(x - pos.x, 0, goalieTargetPos.z*inv - pos.z);
             targetVelocity *= ROBOT_MAX_GROUND_SPEED;
-            return Move(targetVelocity, jump ? ROBOT_MAX_JUMP_SPEED : 0);
+            return Move(targetVelocity, jump ? ROBOT_MAX_JUMP_SPEED : 0, false);
         }
     }
 
     auto targetVelocity = Vec(goalieTargetPos.x - pos.x, 0, goalieTargetPos.z*inv - pos.z);
     targetVelocity *= ROBOT_MAX_GROUND_SPEED;
-    return Move(targetVelocity, jump ? ROBOT_MAX_JUMP_SPEED : 0);
+    return Move(targetVelocity, jump ? ROBOT_MAX_JUMP_SPEED : 0, false);
 }

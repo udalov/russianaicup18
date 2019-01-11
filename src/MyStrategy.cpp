@@ -33,7 +33,7 @@ namespace {
 RobotState createRobot(const Robot& robot) {
     return RobotState(
         robot.id, Vec(robot.x, robot.y, robot.z), Vec(robot.velocity_x, robot.velocity_y, robot.velocity_z), robot.radius,
-        Vec(robot.touch_normal_x, robot.touch_normal_y, robot.touch_normal_z), robot.touch
+        robot.nitro_amount, Vec(robot.touch_normal_x, robot.touch_normal_y, robot.touch_normal_z), robot.touch
     );
 }
 
@@ -167,6 +167,7 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
     action.target_velocity_y = ans.targetVelocity.y;
     action.target_velocity_z = ans.targetVelocity.z;
     action.jump_speed = ans.jumpSpeed;
+    action.use_nitro = ans.useNitro;
 
     if (debug) {
         if (me.id == getCaptain() && VIS) {

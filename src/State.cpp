@@ -8,7 +8,7 @@ using namespace std;
 string RobotState::toString() const {
     ostringstream out;
     out.precision(3);
-    out << fixed << (isAlly(id) ? "ally" : "enemy") << " #" << id << " at=" << position.toString() << " v=" << velocity.toString() << " r=" << radius << (touch ? " T" : "");
+    out << fixed << (isAlly(id) ? "ally" : "enemy") << " #" << id << " at=" << position.toString() << " v=" << velocity.toString() << " n=" << nitro << (touch ? " T" : "");
     return out.str();
 }
 

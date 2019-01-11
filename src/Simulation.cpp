@@ -225,6 +225,25 @@ void updateRobot(RobotState& robot, double deltaTime, const Move& move) {
         }
     }
 
+    if (move.useNitro && robot.nitro > 0) {
+        auto tv = move.targetVelocity - robot.velocity;
+        auto len = tv.len();
+        auto limit = robot.nitro * NITRO_POINT_VELOCITY_CHANGE;
+        if (len > limit) {
+            tv *= limit / len;
+            len = limit;
+        }
+        if (len > 0) {
+            auto coeff = ROBOT_NITRO_ACCELERATION * deltaTime / len;
+            if (coeff < 1) {
+                tv *= coeff;
+            }
+            robot.velocity += tv;
+            constexpr auto nitroDepletionSpeed = ROBOT_NITRO_ACCELERATION / NITRO_POINT_VELOCITY_CHANGE;
+            robot.nitro -= deltaTime * nitroDepletionSpeed;
+        }
+    }
+
     moveUnit(robot, deltaTime);
 
     robot.radius = ROBOT_MIN_RADIUS + (ROBOT_MAX_RADIUS - ROBOT_MIN_RADIUS) *
@@ -330,6 +349,8 @@ void update(State& state, int tick, double deltaTime) {
     } else if (ballZ < -ARENA_D / 2 - BALL_RADIUS) {
         state.goal = -1;
     }
+
+    // TODO: update nitro packs
 }
 
 void simulate(State& state, int ticks, int microticks, Vis *vis, const function<Move(const State&, const RobotState&, int)>& getMove) {
