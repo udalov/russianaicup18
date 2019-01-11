@@ -7,8 +7,16 @@
 constexpr size_t TRACK_LEN = 80;
 constexpr size_t ORDER_LEN = TRACK_LEN * 3;
 constexpr size_t BEST_ORDERS_CACHE_SIZE = 10;
-constexpr int SCORE_EACH_NTH = 5;
 constexpr int MICROTICKS = 4;
+
+struct Config {
+    size_t scoreEachNth;
+    size_t personalBestRandomOrders;
+    size_t randomSuffixOrders;
+    size_t jumpEveryNthRandomSuffixOrder;
+
+    static Config DEFAULT;
+};
 
 struct Order {
     size_t index;

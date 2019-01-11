@@ -10,9 +10,11 @@
 #include "Vec.h"
 #include "Vis.h"
 
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <unordered_map>
 
 using namespace model;
@@ -142,19 +144,66 @@ Move solve(const Game& game, int myId, bool debug) {
     return answers[key];
 }
 
+namespace {
+    vector<double> times;
+    double allTime;
+}
+
+void addTime(double time) {
+    if (time >= 0.002) {
+        times.push_back(time);
+    }
+}
+
+void printTimes() {
+    if (times.empty()) {
+        cout << endl;
+        return;
+    }
+    auto minmax = minmax_element(times.begin(), times.end());
+    auto sum = accumulate(times.begin(), times.end(), 0.0);
+    auto average = sum / times.size();
+    cout << times.size() << " [" << *minmax.first << " " << average << " " << *minmax.second << "] " << sum << endl;
+
+    allTime += sum;
+    times.clear();
+}
+
+void printTickInfo(const Game& game, const Rules& rules) {
+    auto currentTick = game.current_tick;
+    auto isLastTick = currentTick == rules.max_tick_count - 1;
+    if (currentTick % 1000 == 0 || isLastTick) {
+        auto score = getScore(game);
+        cout << "tick " << currentTick << " " << score.first << ":" << score.second << " ";
+        printTimes();
+    }
+    if (isLastTick) {
+        cout << allTime << endl;
+    }
+}
+
 void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Action& action) {
     // printConst(rules); terminate();
 
-    auto currentTick = game.current_tick;
-    if (currentTick == 0) {
+    auto startTime = chrono::high_resolution_clock::now();
+
+    if (game.current_tick == 0) {
         initializeTeams(game);
+        cout.precision(3);
+        cout << fixed;
+    }
+
+    if (me.id == getCaptain()) {
+#ifdef LOCAL
+        if (debug) {
+#endif
+            printTickInfo(game, rules);
+#ifdef LOCAL
+        }
+#endif
     }
 
     if (debug) {
-        if (me.id == getCaptain()) {
-            if (currentTick % 1000 == 0) cout << "tick " << currentTick << endl;
-        }
-
         if (VIS && vis == nullptr) {
             vis = make_unique<Vis>();
             vis->drawArena();
@@ -174,4 +223,7 @@ void MyStrategy::act(const Robot& me, const Rules& rules, const Game& game, Acti
             vis->drawGame(me, game);
         }
     }
+
+    auto endTime = chrono::high_resolution_clock::now();
+    addTime(chrono::duration_cast<chrono::duration<double>>(endTime - startTime).count());
 }

@@ -20,9 +20,9 @@ const Opponent OPPONENT = Opponent::ME_OLD;
 const bool VIS = false;
 const bool DEBUG = true;
 const int SEED = 424242;
-const size_t DURATION = 5000;
+const size_t DURATION = 2000;
 const size_t TEAM_SIZE = 2;
-const bool NITRO = true;
+const bool NITRO = false;
 
 const bool DISABLE_RANDOM = false;
 

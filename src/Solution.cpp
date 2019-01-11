@@ -23,6 +23,15 @@ namespace {
     uniform_real_distribution<double> uniformDouble(0, 1);
 }
 
+Config Config::DEFAULT = [](){
+    Config result;
+    result.scoreEachNth = 5;
+    result.personalBestRandomOrders = 5;
+    result.randomSuffixOrders = 20;
+    result.jumpEveryNthRandomSuffixOrder = 10;
+    return result;
+}();
+
 Move& Order::get(size_t robotIndex, size_t delta) {
     return orders[index + robotIndex * TRACK_LEN + delta];
 }
@@ -59,8 +68,10 @@ struct TickData {
     const Team& team;
     Scenario& enemyStrategy;
     int tick;
+    const Config& config;
 
-    TickData(const Team& team, Scenario& enemyStrategy, int tick) : team(team), enemyStrategy(enemyStrategy), tick(tick) {}
+    TickData(const Team& team, Scenario& enemyStrategy, int tick, const Config& config) :
+        team(team), enemyStrategy(enemyStrategy), tick(tick), config(config) {}
 };
 
 double scoreDefense(const RobotState& robot, const State& state) {
@@ -111,7 +122,7 @@ ScoredOrder scoreOrder(State state, const TickData& data, const Order& order) {
             return data.enemyStrategy.getMove(state, robot, data.tick, delta);
         }
 
-        if (index == 0 && (TRACK_LEN - 1 - delta) % SCORE_EACH_NTH == 0) {
+        if (index == 0 && (TRACK_LEN - 1 - delta) % data.config.scoreEachNth == 0) {
             ans += scoreState(state); // * (TRACK_LEN - delta) / TRACK_LEN;
         }
 
@@ -142,11 +153,10 @@ void compute(const State& state, const TickData& data, array<Order, bestOrdersSi
         results.push_back(scoreOrder(state, data, bestOrder));
     }
 
-    constexpr auto PERSONAL_BEST = 5;
     personalBests.clear();
     for (size_t j = 0; j < teamSize; j++) {
         auto personalBest = *results.begin();
-        for (int iter = 0; iter < PERSONAL_BEST; iter++) {
+        for (size_t iter = 0; iter < data.config.personalBestRandomOrders; iter++) {
             auto cur = getNextOrder();
 
             auto move = generateRandomMove();
@@ -172,7 +182,7 @@ void compute(const State& state, const TickData& data, array<Order, bestOrdersSi
 
     make_heap(results.begin(), results.end());
 
-    for (int iter = 0; iter < 20; iter++) {
+    for (size_t iter = 0; iter < data.config.randomSuffixOrders; iter++) {
         auto cur = getNextOrder();
 
         auto r = randomRobotIndex(rng);
@@ -181,7 +191,7 @@ void compute(const State& state, const TickData& data, array<Order, bestOrdersSi
         if (left > right) swap(left, right);
 
         auto move = generateRandomMove();
-        if (iter % 10 == 0) {
+        if (iter % data.config.jumpEveryNthRandomSuffixOrder == 0) {
             move.jumpSpeed = ROBOT_MAX_JUMP_SPEED;
         }
 
@@ -234,7 +244,7 @@ Move Solution::getMove(const State& state, const RobotState& me, int tick, size_
                 bestOrder = order;
             }
         } else if (tick >= lastGoalTick + RESET_TICKS - 1) {
-            compute(state, TickData(team, enemyStrategy, tick), bestOrders);
+            compute(state, TickData(team, enemyStrategy, tick, Config::DEFAULT), bestOrders);
         }
     }
 
