@@ -208,7 +208,7 @@ void moveUnit(Unit& unit, double deltaTime) {
 void updateRobot(RobotState& robot, double deltaTime, const Move& move) {
     if (robot.touch) {
         auto tv = move.targetVelocity;
-        tv.clamp(ROBOT_MAX_GROUND_SPEED);
+        // tv.clamp(ROBOT_MAX_GROUND_SPEED);
         tv -= robot.touchNormal * robot.touchNormal.dot(tv);
         tv -= robot.velocity;
         auto len = tv.len();
@@ -356,6 +356,7 @@ void simulate(State& state, int ticks, int microticks, Vis *vis, const function<
     for (int tick = 0; tick < ticks; tick++) {
         for (size_t i = 0; i < state.robots.size(); i++) {
             moves[i] = getMove(state, state.robots[i], tick);
+            moves[i].targetVelocity.clamp(ROBOT_MAX_GROUND_SPEED);
         }
 
         /*
