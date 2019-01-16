@@ -8,6 +8,11 @@
 using namespace model;
 using namespace std;
 
+namespace {
+    constexpr auto nitroPackX = array<double, 4> { -NITRO_PACK_X, -NITRO_PACK_X, NITRO_PACK_X, NITRO_PACK_X };
+    constexpr auto nitroPackZ = array<double, 4> { -NITRO_PACK_Z, NITRO_PACK_Z, -NITRO_PACK_Z, NITRO_PACK_Z };
+}
+
 struct Dan {
     double distance;
     Vec normal;
@@ -347,7 +352,22 @@ void update(State& state, double deltaTime) {
         state.goal = -1;
     }
 
-    // TODO: update nitro packs
+    for (auto& robot : robots) {
+        if (robot.nitro == MAX_NITRO_AMOUNT) continue;
+
+        auto pos = robot.position;
+        size_t index = getClosestNitroPackIndex(pos.x, pos.z);
+        auto& pack = state.nitroPacks[index];
+        if (!pack.isAlive()) continue;
+
+        double packX = nitroPackX[index];
+        double packZ = nitroPackZ[index];
+        auto d = robot.radius + NITRO_PACK_RADIUS;
+        if (abs(pos.x - packX) <= d && abs(pos.z - packZ) <= d && pos.distance(Vec(packX, NITRO_PACK_Y, packZ)) <= d) {
+            robot.nitro = MAX_NITRO_AMOUNT;
+            pack.respawnTicks = NITRO_PACK_RESPAWN_TICKS;
+        }
+    }
 }
 
 void simulate(State& state, int ticks, int microticks, Vis *vis, const function<Move(const State&, const RobotState&, size_t)>& getMove) {
@@ -369,6 +389,12 @@ void simulate(State& state, int ticks, int microticks, Vis *vis, const function<
 
         for (int _ = microticks; _ > 0; _--) {
             update(state, deltaTime);
+        }
+
+        for (auto& pack : state.nitroPacks) {
+            if (pack.respawnTicks > 0) {
+                pack.respawnTicks--;
+            }
         }
 
         if (vis != nullptr) {

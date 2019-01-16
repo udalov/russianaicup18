@@ -47,6 +47,16 @@ vector<RobotState> createRobots(const vector<Robot>& robots) {
     return result;
 }
 
+array<NitroPackState, 4> createNitroPacks(const vector<NitroPack>& nitroPacks) {
+    if (nitroPacks.empty()) return {};
+
+    vector<NitroPackState> result(4);
+    for (auto& pack : nitroPacks) {
+        result[getClosestNitroPackIndex(pack.x, pack.z)] = NitroPackState(pack.alive, pack.respawn_ticks);
+    }
+    return { result[0], result[1], result[2], result[3] };
+}
+
 BallState createBall(const Ball& ball) {
     return BallState(Vec(ball.x, ball.y, ball.z), Vec(ball.velocity_x, ball.velocity_y, ball.velocity_z));
 }
@@ -139,7 +149,7 @@ Move solve(const Game& game, int myId, bool debug) {
     auto answer = answers.find(key);
     if (answer != answers.end()) return answer->second;
 
-    solve(State(createRobots(game.robots), createBall(game.ball)), getScore(game), tick, debug);
+    solve(State(createRobots(game.robots), createNitroPacks(game.nitro_packs), createBall(game.ball)), getScore(game), tick, debug);
 
     return answers[key];
 }

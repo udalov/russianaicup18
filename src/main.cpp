@@ -22,7 +22,7 @@ const bool DEBUG = true;
 const int SEED = 424242;
 const size_t DURATION = 5000;
 const size_t TEAM_SIZE = 2;
-const bool NITRO = false;
+const bool NITRO = true;
 
 const bool DISABLE_RANDOM = false;
 

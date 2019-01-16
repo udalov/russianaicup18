@@ -5,6 +5,14 @@
 
 using namespace std;
 
+size_t getClosestNitroPackIndex(double x, double z) {
+    if (x < 0) {
+        return z < 0 ? 0 : 1;
+    } else {
+        return z < 0 ? 2 : 3;
+    }
+}
+
 string RobotState::toString() const {
     ostringstream out;
     out.precision(3);

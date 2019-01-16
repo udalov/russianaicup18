@@ -11,6 +11,7 @@ constexpr int MICROTICKS = 4;
 
 struct Config {
     size_t scoreEachNth;
+    size_t personalBestWithNitro;
     size_t personalBestRandomOrders;
     size_t randomSuffixOrders;
     size_t jumpEveryNthRandomSuffixOrder;

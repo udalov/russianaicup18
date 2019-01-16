@@ -27,6 +27,7 @@ Config Config::DEFAULT = [](){
     Config result;
     result.scoreEachNth = 5;
     result.personalBestRandomOrders = 15;
+    result.personalBestWithNitro = 0; // TODO: enable
     result.randomSuffixOrders = 20;
     result.jumpEveryNthRandomSuffixOrder = 10;
     return result;
@@ -107,6 +108,9 @@ double scoreState(const State& state) {
     score -= 100 * ball.velocity.sqrDist(wantedBallVelocity);
     score += 100000 * state.goal;
 
+    // TODO: enable
+    // score += 10 * (robot0->nitro + robot1->nitro);
+
     return score + max(
         scoreDefense(*robot0, state) + scoreAttack(*robot1, state),
         scoreDefense(*robot1, state) + scoreAttack(*robot0, state)
@@ -139,6 +143,13 @@ Move generateRandomMove() {
     return Move(Vec(x * MAX_ENTITY_SPEED, 0.0, z * MAX_ENTITY_SPEED), 0.0, false);
 }
 
+Move generateRandomNitroMove() {
+    auto u = uniformDouble(rng) * M_PI * 2;
+    auto h = uniformDouble(rng) * 2 - 1;
+    auto r = sqrt(1 - sqr(h));
+    return Move(Vec(cos(u) * r, sin(u) * r, h) * MAX_ENTITY_SPEED, 0.0, true);
+}
+
 template<size_t bestOrdersSize>
 void compute(const State& state, const TickData& data, array<Order, bestOrdersSize>& bestOrders) {
     auto teamSize = data.team.size;
@@ -156,6 +167,7 @@ void compute(const State& state, const TickData& data, array<Order, bestOrdersSi
     personalBests.clear();
     for (size_t j = 0; j < teamSize; j++) {
         auto personalBest = *results.begin();
+
         for (size_t iter = 0; iter < data.config.personalBestRandomOrders; iter++) {
             auto cur = getNextOrder();
 
@@ -169,6 +181,23 @@ void compute(const State& state, const TickData& data, array<Order, bestOrdersSi
             personalBest = max(personalBest, scored);
             results.push_back(scored);
         }
+
+        for (size_t iter = 0; iter < data.config.personalBestWithNitro; iter++) {
+            auto cur = getNextOrder();
+
+            auto move1 = generateRandomMove();
+            auto move2 = generateRandomNitroMove();
+            auto change = randomMoveIndex(rng);
+            for (size_t i = 0; i < TRACK_LEN; i++) cur(j, i) = i < change ? move1 : move2;
+            for (size_t k = 0; k < teamSize; k++) if (k != j) {
+                for (size_t i = 0; i < TRACK_LEN; i++) cur(k, i) = Move();
+            }
+
+            auto scored = scoreOrder(state, data, cur);
+            personalBest = max(personalBest, scored);
+            results.push_back(scored);
+        }
+
         personalBests.push_back(personalBest);
     }
 

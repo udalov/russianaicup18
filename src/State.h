@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Vec.h"
+#include <array>
 #include <string>
 #include <vector>
 
@@ -30,13 +31,28 @@ struct BallState {
     std::string toString() const;
 };
 
+struct NitroPackState {
+    int respawnTicks;
+
+    NitroPackState() :
+        respawnTicks(1000000) {}
+
+    NitroPackState(bool alive, int respawnTicks) :
+        respawnTicks(alive ? 0 : respawnTicks) {}
+
+    bool isAlive() const { return respawnTicks == 0; }
+};
+
 struct State {
     std::vector<RobotState> robots;
+    std::array<NitroPackState, 4> nitroPacks;
     BallState ball;
     int goal; // 1 if allies scored, -1 if enemies scored, 0 otherwise
 
-    State(std::vector<RobotState>&& robots, BallState&& ball) :
-        robots(robots), ball(ball), goal(0) {}
+    State(std::vector<RobotState>&& robots, std::array<NitroPackState, 4>&& nitroPacks, BallState&& ball) :
+        robots(robots), nitroPacks(nitroPacks), ball(ball), goal(0) {}
 
     const RobotState& findRobotById(int id) const;
 };
+
+size_t getClosestNitroPackIndex(double x, double z);
