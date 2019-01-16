@@ -19,8 +19,8 @@ enum class Opponent {
 const Opponent OPPONENT = Opponent::ME_OLD;
 const bool VIS = false;
 const bool DEBUG = true;
-const int SEED = 424242;
-const size_t DURATION = 5000;
+const int DEFAULT_SEED = 424242;
+const size_t DEFAULT_DURATION = 5000;
 const size_t TEAM_SIZE = 2;
 const bool NITRO = true;
 
@@ -64,12 +64,13 @@ template<typename... Args> void runProcessAndWait(const string& path, Args... ar
     waitFor(pid);
 }
 
-int main(/* int argc, char* argv[] */) {
+int main(int argc, char* argv[]) {
     string resultsFile = "out/result.txt";
     runProcessAndWait("/bin/rm", resultsFile);
 
     vector<string> args = {
-        "--duration", to_string(DURATION),
+        "--duration", argc > 1 ? argv[1] : to_string(DEFAULT_DURATION),
+        "--seed", argc > 2 ? argv[2] : to_string(DEFAULT_SEED),
         "--results-file", "../" + resultsFile,
         "--team-size", to_string(TEAM_SIZE),
         "--p1-name", "Me",
@@ -79,9 +80,6 @@ int main(/* int argc, char* argv[] */) {
 
     if (!VIS) {
         args.emplace_back("--noshow");
-    }
-    if (SEED != -1) {
-        args.insert(args.end(), { "--seed", to_string(SEED) });
     }
     if (NITRO) {
         args.insert(args.end(), { "--nitro", "true" });
