@@ -77,28 +77,20 @@ struct TickData {
         team(team), enemyStrategy(enemyStrategy), tick(tick), config(config) {}
 };
 
-double scoreDefense(const RobotState& robot, const State& state) {
-    // auto target = Vec(state.ball.position.x / 3, 0, -ARENA_D / 2 - BALL_RADIUS);
+double scoreDefense(const RobotState& robot) {
+    // auto target = Vec(ball.position.x / 3, 0, -ARENA_D / 2 - BALL_RADIUS);
     auto target = Vec(0, 0, -ARENA_D / 2);
     return -robot.position.distance(target) - sqr(sqr(robot.position.y));
 }
 
-double scoreAttack(const RobotState& robot, const State& state) {
-    // return -robot.position.distance(state.ball.position);
+double scoreAttack(const RobotState& robot, const BallState& ball) {
+    // return -robot.position.distance(ball.position);
     Vec myPosXZ = Vec(robot.position.x, 0, robot.position.z);
-    Vec ballPosXZ = Vec(state.ball.position.x, 0, state.ball.position.z - BALL_RADIUS - robot.radius);
+    Vec ballPosXZ = Vec(ball.position.x, 0, ball.position.z - BALL_RADIUS - robot.radius);
     return -myPosXZ.distance(ballPosXZ);
 }
 
-double scoreState(const State& state) {
-    const RobotState *robot0 = nullptr;
-    const RobotState *robot1 = nullptr;
-    for (auto& robot : state.robots) {
-        if (isAlly(robot.id)) {
-            robot1 = robot0;
-            robot0 = &robot;
-        }
-    }
+double scoreState(const State& state, const RobotState& robot0, const RobotState& robot1) {
     auto& ball = state.ball;
 
     auto score = 0.0;
@@ -110,25 +102,34 @@ double scoreState(const State& state) {
     score -= 100 * ball.velocity.sqrDist(wantedBallVelocity);
     score += 100000 * state.goal;
 
-    score += robot0->nitro + robot1->nitro;
+    score += robot0.nitro + robot1.nitro;
 
     return score + max(
-        scoreDefense(*robot0, state) + scoreAttack(*robot1, state),
-        scoreDefense(*robot1, state) + scoreAttack(*robot0, state)
+        scoreDefense(robot0) + scoreAttack(robot1, ball),
+        scoreDefense(robot1) + scoreAttack(robot0, ball)
     );
 }
 
 ScoredOrder scoreOrder(State state, const TickData& data, const Order& order) {
+    const RobotState *robot0 = nullptr;
+    const RobotState *robot1 = nullptr;
+    for (auto& robot : state.robots) {
+        if (isAlly(robot.id)) {
+            robot1 = robot0;
+            robot0 = &robot;
+        }
+    }
+
     auto ans = 0.0;
 
-    simulate(state, TRACK_LEN, MICROTICKS, nullptr, [&data, &order, &ans](const State& state, const RobotState& robot, size_t delta) {
+    simulate(state, TRACK_LEN, MICROTICKS, nullptr, [&data, &order, &ans, robot0, robot1](const State& state, const RobotState& robot, size_t delta) {
         auto index = data.team.getIndex(robot.id);
         if (index == Team::NONE) {
             return data.enemyStrategy.getMove(state, robot, data.tick, delta);
         }
 
         if (index == 0 && (TRACK_LEN - 1 - delta) % data.config.scoreEachNth == 0) {
-            ans += scoreState(state); // * (TRACK_LEN - delta) / TRACK_LEN;
+            ans += scoreState(state, *robot0, *robot1); // * (TRACK_LEN - delta) / TRACK_LEN;
         }
 
         return order(index, delta);
