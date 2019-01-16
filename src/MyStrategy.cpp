@@ -24,6 +24,12 @@ using namespace std;
 #define LOG 0
 #define MEASURE_SIMULATION_SPEED 0
 
+#ifdef LOCAL
+#define TICK_INFO 1000
+#else
+#define TICK_INFO 2000
+#endif
+
 MyStrategy::MyStrategy() = default;
 
 namespace {
@@ -182,7 +188,7 @@ void printTimes() {
 void printTickInfo(const Game& game, const Rules& rules) {
     auto currentTick = game.current_tick;
     auto isLastTick = currentTick == rules.max_tick_count - 1;
-    if (currentTick % 1000 == 0 || isLastTick) {
+    if (currentTick % TICK_INFO == 0 || isLastTick) {
         auto score = getScore(game);
         cout << "tick " << currentTick << " " << score.first << ":" << score.second << " ";
         printTimes();
