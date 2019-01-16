@@ -26,8 +26,6 @@ const bool NITRO = true;
 
 const bool DISABLE_RANDOM = false;
 
-const string HOME = "/Users/udalov/c/russianaicup18/";
-
 template<typename... Args> pid_t runProcess(const string& path, Args... vararg) {
     auto pid = fork();
     if (pid == -1) {
@@ -67,12 +65,12 @@ template<typename... Args> void runProcessAndWait(const string& path, Args... ar
 }
 
 int main(/* int argc, char* argv[] */) {
-    auto resultsFile = HOME + "out/result.txt";
+    string resultsFile = "out/result.txt";
     runProcessAndWait("/bin/rm", resultsFile);
 
     vector<string> args = {
         "--duration", to_string(DURATION),
-        "--results-file", resultsFile,
+        "--results-file", "../" + resultsFile,
         "--team-size", to_string(TEAM_SIZE),
         "--p1-name", "Me",
         "--vsync",
@@ -101,12 +99,12 @@ int main(/* int argc, char* argv[] */) {
         args.insert(args.end(), { "--p2", "tcp-31002", "--p2-name", "Me Old" });
     }
 
-    auto localRunner = runProcess(HOME + "local-runner/codeball2018", args);
+    auto localRunner = runProcess("local-runner/codeball2018", args);
     cout << "Local runner pid " << localRunner << endl;
 
     auto me2 =
-        OPPONENT == Opponent::ME ? runProcess(HOME + "out/Runner", "31002") :
-        OPPONENT == Opponent::ME_OLD ? runProcess(HOME + "out/Old", "31002") : -1;
+        OPPONENT == Opponent::ME ? runProcess("out/Runner", "31002") :
+        OPPONENT == Opponent::ME_OLD ? runProcess("out/Old", "31002") : -1;
 
     Runner runner("127.0.0.1", "31001", "0000000000000000");
     runner.run(DEBUG);
