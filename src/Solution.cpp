@@ -11,6 +11,8 @@ using namespace std;
 struct ScoredOrder;
 
 namespace {
+    constexpr auto NITRO_CONSIDERATION_THRESHOLD = 10.0;
+
     mt19937 rng(42);
 
     vector<Move> orders(2000 * ORDER_LEN);
@@ -27,7 +29,7 @@ Config Config::DEFAULT = [](){
     Config result;
     result.scoreEachNth = 5;
     result.personalBestRandomOrders = 15;
-    result.personalBestWithNitro = 0; // TODO: enable
+    result.personalBestWithNitro = 10;
     result.randomSuffixOrders = 20;
     result.jumpEveryNthRandomSuffixOrder = 10;
     return result;
@@ -108,8 +110,7 @@ double scoreState(const State& state) {
     score -= 100 * ball.velocity.sqrDist(wantedBallVelocity);
     score += 100000 * state.goal;
 
-    // TODO: enable
-    // score += 10 * (robot0->nitro + robot1->nitro);
+    score += robot0->nitro + robot1->nitro;
 
     return score + max(
         scoreDefense(*robot0, state) + scoreAttack(*robot1, state),
@@ -168,25 +169,16 @@ void compute(const State& state, const TickData& data, array<Order, bestOrdersSi
     for (size_t j = 0; j < teamSize; j++) {
         auto personalBest = *results.begin();
 
-        for (size_t iter = 0; iter < data.config.personalBestRandomOrders; iter++) {
-            auto cur = getNextOrder();
+        size_t withNitro =
+            state.findRobotById(data.team.getId(j)).nitro > NITRO_CONSIDERATION_THRESHOLD
+            ? data.config.personalBestWithNitro
+            : 0;
 
-            auto move = generateRandomMove();
-            for (size_t i = 0; i < TRACK_LEN; i++) cur(j, i) = move;
-            for (size_t k = 0; k < teamSize; k++) if (k != j) {
-                for (size_t i = 0; i < TRACK_LEN; i++) cur(k, i) = Move();
-            }
-
-            auto scored = scoreOrder(state, data, cur);
-            personalBest = max(personalBest, scored);
-            results.push_back(scored);
-        }
-
-        for (size_t iter = 0; iter < data.config.personalBestWithNitro; iter++) {
+        for (size_t iter = 0; iter < data.config.personalBestRandomOrders + withNitro; iter++) {
             auto cur = getNextOrder();
 
             auto move1 = generateRandomMove();
-            auto move2 = generateRandomNitroMove();
+            auto move2 = iter < data.config.personalBestRandomOrders ? generateRandomMove() : generateRandomNitroMove();
             auto change = randomMoveIndex(rng);
             for (size_t i = 0; i < TRACK_LEN; i++) cur(j, i) = i < change ? move1 : move2;
             for (size_t k = 0; k < teamSize; k++) if (k != j) {
