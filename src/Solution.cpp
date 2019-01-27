@@ -77,20 +77,36 @@ struct TickData {
         team(team), enemyStrategy(enemyStrategy), tick(tick), config(config) {}
 };
 
-double scoreDefense(const RobotState& robot) {
-    // auto target = Vec(ball.position.x / 3, 0, -ARENA_D / 2 - BALL_RADIUS);
-    auto target = Vec(0, 0, -ARENA_D / 2);
+double max6(double a0, double a1, double a2, double a3, double a4, double a5) {
+    return max(max(max(a0, a1), max(a2, a3)), max(a4, a5));
+}
+
+double scoreDefense2(const RobotState& robot) {
+    // constexpr auto target = Vec(ball.position.x / 3, 0, -ARENA_D / 2 - BALL_RADIUS);
+    constexpr auto target = Vec(0, 0, -ARENA_D / 2);
     return -robot.position.distance(target) - sqr(sqr(robot.position.y));
 }
 
-double scoreAttack(const RobotState& robot, const BallState& ball) {
+double scoreAttack2(const RobotState& robot, const BallState& ball) {
     // return -robot.position.distance(ball.position);
     Vec myPosXZ = Vec(robot.position.x, 0, robot.position.z);
     Vec ballPosXZ = Vec(ball.position.x, 0, ball.position.z - BALL_RADIUS - robot.radius);
     return -myPosXZ.distance(ballPosXZ);
 }
 
-double scoreState(const State& state, const RobotState& robot0, const RobotState& robot1) {
+double scoreDefense3(const RobotState& robot) {
+    return scoreDefense2(robot);
+}
+
+double scoreMidfield3(const RobotState& robot, const BallState& ball) {
+    return scoreAttack2(robot, ball);
+}
+
+double scoreAttack3(const RobotState& robot, const BallState& ball) {
+    return scoreAttack2(robot, ball);
+}
+
+double scoreState(const State& state, const RobotState& robot0, const RobotState& robot1, const RobotState *robot2) {
     auto& ball = state.ball;
 
     auto score = 0.0;
@@ -102,34 +118,51 @@ double scoreState(const State& state, const RobotState& robot0, const RobotState
     score -= 100 * ball.velocity.sqrDist(wantedBallVelocity);
     score += 100000 * state.goal;
 
-    score += robot0.nitro + robot1.nitro;
+    if (robot2 != nullptr) {
+        score += (robot0.nitro + robot1.nitro + robot2->nitro) * 2./3;
+    } else {
+        score += robot0.nitro + robot1.nitro;
+    }
 
-    return score + max(
-        scoreDefense(robot0) + scoreAttack(robot1, ball),
-        scoreDefense(robot1) + scoreAttack(robot0, ball)
-    );
+    auto positioning = robot2 != nullptr ?
+        max6(
+            scoreDefense3(robot0) + scoreMidfield3(robot1, ball) + scoreAttack3(*robot2, ball),
+            scoreDefense3(robot0) + scoreMidfield3(*robot2, ball) + scoreAttack3(robot1, ball),
+            scoreDefense3(robot1) + scoreMidfield3(robot0, ball) + scoreAttack3(*robot2, ball),
+            scoreDefense3(robot1) + scoreMidfield3(*robot2, ball) + scoreAttack3(robot0, ball),
+            scoreDefense3(*robot2) + scoreMidfield3(robot0, ball) + scoreAttack3(robot1, ball),
+            scoreDefense3(*robot2) + scoreMidfield3(robot1, ball) + scoreAttack3(robot0, ball)
+        ) : max(
+            scoreDefense2(robot0) + scoreAttack2(robot1, ball),
+            scoreDefense2(robot1) + scoreAttack2(robot0, ball)
+        );
+
+    return score + positioning;
 }
 
 ScoredOrder scoreOrder(State state, const TickData& data, const Order& order) {
     const RobotState *robot0 = nullptr;
     const RobotState *robot1 = nullptr;
+    const RobotState *robot2 = nullptr;
     for (auto& robot : state.robots) {
         if (isAlly(robot.id)) {
+            robot2 = robot1;
             robot1 = robot0;
             robot0 = &robot;
         }
     }
+    assert((robot2 != nullptr) == (data.team.size == 3));
 
     auto ans = 0.0;
 
-    simulate(state, TRACK_LEN, MICROTICKS, nullptr, [&data, &order, &ans, robot0, robot1](const State& state, const RobotState& robot, size_t delta) {
+    simulate(state, TRACK_LEN, MICROTICKS, nullptr, [&data, &order, &ans, robot0, robot1, robot2](const State& state, const RobotState& robot, size_t delta) {
         auto index = data.team.getIndex(robot.id);
         if (index == Team::NONE) {
             return data.enemyStrategy.getMove(state, robot, data.tick, delta);
         }
 
         if (index == 0 && (TRACK_LEN - 1 - delta) % data.config.scoreEachNth == 0) {
-            ans += scoreState(state, *robot0, *robot1); // * (TRACK_LEN - delta) / TRACK_LEN;
+            ans += scoreState(state, *robot0, *robot1, robot2); // * (TRACK_LEN - delta) / TRACK_LEN;
         }
 
         return order(index, delta);

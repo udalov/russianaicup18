@@ -21,7 +21,7 @@ const bool VIS = false;
 const bool DEBUG = true;
 const int DEFAULT_SEED = 424242;
 const size_t DEFAULT_DURATION = 5000;
-const size_t TEAM_SIZE = 2;
+const size_t TEAM_SIZE = 3;
 const bool NITRO = true;
 
 const bool DISABLE_RANDOM = false;
