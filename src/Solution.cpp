@@ -28,8 +28,8 @@ namespace {
 Config Config::DEFAULT = [](){
     Config result;
     result.scoreEachNth = 5;
-    result.personalBestRandomOrders = 15;
-    result.personalBestWithNitro = 10;
+    result.personalBestRandomOrders = 12;
+    result.personalBestWithNitro = 3;
     result.randomSuffixOrders = 20;
     result.jumpEveryNthRandomSuffixOrder = 10;
     return result;
